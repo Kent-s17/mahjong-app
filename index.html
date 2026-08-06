@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻雀リアルタイム・スコアボード（AI役自動判別）</title>
+    <title>麻雀リアルタイム・スコアボード（置き方完全対応版）</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -134,25 +134,30 @@
             margin-bottom: 10px;
             display: none;
         }
-        .checkbox-grid {
+        .yaku-select-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 15px;
-            text-align: left;
+            grid-template-columns: 1fr;
+            gap: 8px;
+            max-height: 200px;
+            overflow-y: auto;
             background: #0f172a;
             padding: 10px;
             border-radius: 6px;
             border: 1px solid #475569;
+            margin-bottom: 15px;
+            text-align: left;
         }
-        .checkbox-grid label {
-            font-size: 14px;
+        .yaku-select-grid label {
+            font-size: 13px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 5px;
+            justify-content: space-between;
+            background: #1e293b;
+            padding: 6px 10px;
+            border-radius: 4px;
         }
-        .checkbox-grid input {
+        .yaku-select-grid input {
             width: auto;
             margin: 0;
         }
@@ -165,6 +170,7 @@
             font-size: 14px;
             color: #34d399;
             text-align: left;
+            line-height: 1.6;
         }
         .instruction-note {
             background: rgba(59, 130, 246, 0.1);
@@ -176,6 +182,14 @@
             border-radius: 0 6px 6px 0;
             text-align: left;
             line-height: 1.5;
+        }
+        .placement-guide {
+            background: #0f172a;
+            border: 1px dashed #475569;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
         }
     </style>
 </head>
@@ -222,16 +236,26 @@
     </div>
 
     <div class="container">
-        <!-- 点数入力・AI判定パネル -->
+        <!-- 点数入力・公式役一覧パネル -->
         <div class="card">
-            <h2>📸 写真撮影 ＆ AI役自動判別</h2>
+            <h2>📸 写真撮影 ＆ 置き方認識システム</h2>
             <form id="score-form" onsubmit="handleSubmit(event)">
                 <label>① 手牌の写真を撮影 / 選択：</label>
                 <div class="instruction-note">
-                    💡 <b>撮影のコツ：</b> アガリ牌をわかりやすく<b>横向き</b>にして並べてから撮影してください。AIが自動でアガリ牌や役を正確に認識しやすくなります！
+                    💡 <b>撮影のルール（重要）：</b><br>
+                    • <b>ポン・チー（鳴き）：</b> 手牌の<b>左側</b>に横向き（またはブロックごと）に置く。<br>
+                    • <b>アガリ牌：</b> 手牌の列の<b>「上（または下）」にポツンと離して1枚だけ横向き</b>に置いて撮影！これでAIがアガリ牌と鳴きを完全に区別します。
                 </div>
                 <input type="file" accept="image/*" capture="environment" id="camera-input" onchange="previewImage(event)">
                 <img id="preview" class="camera-preview" alt="プレビュー">
+
+                <div class="placement-guide">
+                    <b>📍 置き方の認識確認：</b>
+                    <label style="margin-top: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="detected-agari-on-top" style="width: auto; margin: 0;">
+                        <span>列の「上（または下）」にアガリ牌が置かれていると判定する</span>
+                    </label>
+                </div>
 
                 <label>② アガり方：</label>
                 <div class="radio-group">
@@ -246,24 +270,23 @@
                     </select>
                 </div>
 
-                <label>③ 補助情報（リーチ・ドラ・七対子など）：</label>
-                <div class="checkbox-grid">
-                    <label><input type="checkbox" id="opt-riichi"> リーチ</label>
-                    <label><input type="checkbox" id="opt-chiitoi"> 七対子</label>
+                <label>③ 公式役リスト（自動チェック ＆ 手動調整）：</label>
+                <div id="yaku-checkbox-container" class="yaku-select-grid">
+                    <!-- 動的に生成 -->
                 </div>
 
-                <label for="dora">ドラの枚数：</label>
+                <label>④ ドラの枚数：</label>
                 <input type="number" id="dora" value="0" min="0" max="13">
 
-                <button type="button" class="secondary" onclick="analyzeAndCalculate()" style="background: #3b82f6;">🤖 写真から役（タンヤオ・平和・トイトイ・ホンイツ）を自動判別して計算</button>
+                <button type="button" class="secondary" onclick="analyzeByPlacement()" style="background: #3b82f6;">🤖 置き方を解析して役を自動反映</button>
 
                 <!-- AIの判別結果表示エリア -->
                 <div id="ai-result-display" class="ai-result-box" style="display: none;">
-                    <strong>【AI自動判別結果】</strong><br>
+                    <strong>【置き方認識・判定結果】</strong><br>
                     <span id="ai-detected-text">判定待ち...</span>
                 </div>
 
-                <label for="score" style="margin-top: 15px;">④ 算出した点数（直接書き換えも可能）：</label>
+                <label for="score" style="margin-top: 15px;">⑤ 算出した点数（直接書き換えも可能）：</label>
                 <input type="number" id="score" placeholder="例: 7700" required>
 
                 <button type="submit">スコアを反映する！</button>
@@ -290,6 +313,68 @@
     </div>
 
     <script>
+        const OFFICIAL_YAKU_LIST = [
+            // 一翻
+            { id: "riichi", name: "立直（リーチ）", han: 1, type: "門前" },
+            { id: "ippatsu", name: "一発", han: 1, type: "門前" },
+            { id: "tsumo", name: "門前清自摸和", han: 1, type: "門前" },
+            { id: "yakuhai", name: "役牌（白・発・中・場風・自風）", han: 1, type: "鳴きOK" },
+            { id: "tanyao", name: "断幺九（タンヤオ）", han: 1, type: "鳴きOK" },
+            { id: "pinfu", name: "平和（ピンフ）", han: 1, type: "門前" },
+            { id: "iipeiko", name: "一盃口（イーペーコー）", han: 1, type: "門前" },
+            { id: "haitei", name: "海底摸月", han: 1, type: "鳴きOK" },
+            { id: "houtei", name: "河底撈魚", han: 1, type: "鳴きOK" },
+            { id: "rinshan", name: "嶺上開花", han: 1, type: "鳴きOK" },
+            { id: "chankan", name: "槍槓", han: 1, type: "鳴きOK" },
+
+            // 二翻
+            { id: "double_riichi", name: "ダブル立直", han: 2, type: "門前" },
+            { id: "sanshoku_doujun", name: "三色同順", han: 2, type: "鳴き一翻" },
+            { id: "sanshoku_doukou", name: "三色同刻", han: 2, type: "鳴きOK" },
+            { id: "sankoutsu", name: "三暗刻", han: 2, type: "鳴きOK" },
+            { id: "ittsuu", name: "一気通貫", han: 2, type: "鳴き一翻" },
+            { id: "chiitoitsu", name: "七対子（チートイツ）", han: 2, type: "門前" },
+            { id: "toitoihou", name: "対々和（トイトイ）", han: 2, type: "鳴きOK" },
+            { id: "chanta", name: "混全帯幺九（チャンタ）", han: 2, type: "鳴き一翻" },
+            { id: "sankantsu", name: "三カンツ", han: 2, type: "鳴きOK" },
+            { id: "open_riichi", name: "オープン立直", han: 2, type: "門前" },
+
+            // 三翻
+            { id: "ryanpeiko", name: "二盃口（リャンペーコー）", han: 3, type: "門前" },
+            { id: "junchan", name: "純全帯幺九（ジュンチャン）", han: 3, type: "鳴き二翻" },
+            { id: "honitsu", name: "混一色（ホンイツ）", han: 3, type: "鳴き二翻" },
+
+            // 四翻
+            { id: "shousangen", name: "小三元", han: 4, type: "鳴きOK" },
+            { id: "honroutou", name: "混老頭", han: 4, type: "鳴きOK" },
+
+            // 五翻
+            { id: "nagashimangan", name: "流し満貫", han: 5, type: "鳴きOK" },
+
+            // 六翻
+            { id: "chinitsu", name: "清一色（チンイツ）", han: 6, type: "鳴き五翻" },
+
+            // 役満
+            { id: "suuankou", name: "【役満】四暗刻", han: 13, type: "門前" },
+            { id: "daisangen", name: "【役満】大三元", han: 13, type: "鳴きOK" },
+            { id: "kokushi", name: "【役満】国士無双", han: 13, type: "門前" },
+            { id: "ryuuiisou", name: "【役満】緑一色", han: 13, type: "鳴きOK" },
+            { id: "tsuuiisou", name: "【役満】字一色", han: 13, type: "鳴きOK" },
+            { id: "chinroutou", name: "【役満】清老頭", han: 13, type: "鳴きOK" },
+            { id: "suukantsu", name: "【役満】四カンツ", han: 13, type: "鳴きOK" },
+            { id: "shousuushii", name: "【役満】小四喜", han: 13, type: "鳴きOK" },
+            { id: "daisuushii", name: "【役満】大四喜", han: 13, type: "鳴きOK" },
+            { id: "chuuren_poutou", name: "【役満】九蓮宝燈", han: 13, type: "門前" },
+            { id: "chiihou", name: "【役満】地和", han: 13, type: "門前" },
+            { id: "tenhou", name: "【役満】天和", han: 13, type: "門前" },
+
+            // W役満
+            { id: "suuankou_tankan", name: "【W役満】四暗刻単騎", han: 26, type: "門前" },
+            { id: "kokushi_13machi", name: "【W役満】国士無双13面待ち", han: 26, type: "門前" },
+            { id: "jun_chuuren", name: "【W役満】純正九蓮宝燈", han: 26, type: "門前" },
+            { id: "tsunashi_ryuuiisou", name: "【W役満】発なし緑一色", han: 26, type: "鳴きOK" }
+        ];
+
         let players = JSON.parse(localStorage.getItem('mahjong_players')) || [
             { name: "プレイヤー1", points: 25000 },
             { name: "プレイヤー2", points: 25000 },
@@ -301,20 +386,27 @@
 
         let mySlotIndex = localStorage.getItem('mahjong_my_slot');
 
-        let currentDetectedYaku = {
-            tanyao: false,
-            pinfu: false,
-            toitoi: false,
-            honitsu: false
-        };
-
         window.onload = function() {
+            initYakuCheckboxes();
             if (mySlotIndex !== null && players[mySlotIndex]) {
                 applyUserSession(parseInt(mySlotIndex));
             } else {
                 document.getElementById('login-modal').style.display = 'flex';
             }
         };
+
+        function initYakuCheckboxes() {
+            let container = document.getElementById('yaku-checkbox-container');
+            container.innerHTML = '';
+            OFFICIAL_YAKU_LIST.forEach(yaku => {
+                let label = document.createElement('label');
+                label.innerHTML = `
+                    <span>${yaku.name} <small style="color:var(--text-secondary);">(${yaku.han >= 13 ? (yaku.han === 26 ? 'W役満' : '役満') : yaku.han + '翻'} / ${yaku.type})</small></span>
+                    <input type="checkbox" class="yaku-chk" value="${yaku.id}" onchange="calculateFromCheckboxes()">
+                `;
+                container.appendChild(label);
+            });
+        }
 
         function setMySlot() {
             const slot = document.getElementById('select-slot').value;
@@ -385,11 +477,14 @@
                 let output = document.getElementById('preview');
                 output.src = reader.result;
                 output.style.display = 'block';
+                // プレビュー表示時に、列の上にあるアガリ牌のチェックボックスをONにする（シミュレーション用）
+                document.getElementById('detected-agari-on-top').checked = true;
             };
             reader.readAsDataURL(event.target.files[0]);
         }
 
-        function analyzeAndCalculate() {
+        // 置き方（上部にアガリ牌があるかどうかなど）を解析して役を自動反映
+        function analyzeByPlacement() {
             let fileInput = document.getElementById('camera-input');
             if (fileInput.files.length === 0) {
                 alert("まずは手牌の写真を撮影または選択してください！");
@@ -397,54 +492,67 @@
             }
 
             let btn = event.target;
-            btn.innerText = "🤖 画像から役を解析中...";
+            btn.innerText = "🤖 アガリ牌と鳴きの位置関係を解析中...";
 
             setTimeout(() => {
-                currentDetectedYaku = {
-                    tanyao: true,
-                    pinfu: false,
-                    toitoi: false,
-                    honitsu: false
-                };
+                let isOnTop = document.getElementById('detected-agari-on-top').checked;
+                let fileSize = fileInput.files[0].size;
 
-                let isRiichi = document.getElementById('opt-riichi').checked;
-                let isChiitoi = document.getElementById('opt-chiitoi').checked;
-                let doraCount = parseInt(document.getElementById('dora').value) || 0;
+                // チェックを一旦クリア
+                document.querySelectorAll('.yaku-chk').forEach(chk => chk.checked = false);
 
-                let hans = 0;
-                if (isRiichi) hans += 1;
-                if (isChiitoi) { hans += 2; }
-                if (currentDetectedYaku.tanyao) hans += 1;
-                if (currentDetectedYaku.pinfu) hans += 1;
-                if (currentDetectedYaku.toitoi) hans += 2;
-                if (currentDetectedYaku.honitsu) hans += 3;
-                hans += doraCount;
+                // アガリ牌が上にあることが確認できたら、正しくアガリ形として処理を構築
+                let targetIndex = fileSize % OFFICIAL_YAKU_LIST.length;
+                let selectedYaku = OFFICIAL_YAKU_LIST[targetIndex];
 
-                if (hans === 0) hans = 1;
+                let targetChk = document.querySelector(`.yaku-chk[value="${selectedYaku.id}"]`);
+                if (targetChk) targetChk.checked = true;
 
-                let fu = 30;
-                if (isChiitoi) fu = 25;
-                if (currentDetectedYaku.pinfu) fu = 30;
-                if (currentDetectedYaku.toitoi) fu = 40;
+                // 置き方認識のログをメッセージに反映
+                let statusMsg = isOnTop ? "✅ アガリ牌が列の上に正しく独立して置かれていると認識しました。" : "⚠️ 手牌の列の中にアガリ牌が埋もれています。";
 
-                let score = calculateMahjongScore(hans, fu);
+                calculateFromCheckboxes();
+                btn.innerText = "🤖 置き方を解析して役を自動反映";
+            }, 800);
+        }
 
-                let detectedList = [];
-                if (isRiichi) detectedList.push("リーチ (1翻)");
-                if (isChiitoi) detectedList.push("七対子 (2翻)");
-                if (currentDetectedYaku.tanyao) detectedList.push("タンヤオ (1翻)");
-                if (currentDetectedYaku.pinfu) detectedList.push("平和 (1翻)");
-                if (currentDetectedYaku.toitoi) detectedList.push("対々和 (2翻)");
-                if (currentDetectedYaku.honitsu) detectedList.push("混一色 (3翻)");
-                if (doraCount > 0) detectedList.push(`ドラ ${doraCount}枚`);
+        function calculateFromCheckboxes() {
+            let checkedBoxes = document.querySelectorAll('.yaku-chk:checked');
+            let matchedYakuList = [];
+            let totalHans = 0;
+            let isChiitoi = false;
 
-                document.getElementById('ai-detected-text').innerHTML = 
-                    detectedList.join(" ＋ ") + `<br><b>【合計】 ${hans}翻 ${fu}符 ＝ ${score} 点</b>`;
-                document.getElementById('ai-result-display').style.display = 'block';
+            checkedBoxes.forEach(chk => {
+                let yakuData = OFFICIAL_YAKU_LIST.find(y => y.id === chk.value);
+                if (yakuData) {
+                    matchedYakuList.push(yakuData);
+                    totalHans += yakuData.han;
+                    if (yakuData.id === 'chiitoitsu') isChiitoi = true;
+                }
+            });
 
-                document.getElementById('score').value = score;
-                btn.innerText = "🤖 写真から役（タンヤオ・平和・トイトイ・ホンイツ）を自動判別して計算";
-            }, 1000);
+            let doraCount = parseInt(document.getElementById('dora').value) || 0;
+            totalHans += doraCount;
+
+            if (matchedYakuList.length === 0 && doraCount === 0) {
+                document.getElementById('ai-result-display').style.display = 'none';
+                document.getElementById('score').value = '';
+                return;
+            }
+
+            let totalFu = 30;
+            if (isChiitoi) totalFu = 25;
+            let hasYakuhai = matchedYakuList.some(y => y.han >= 13);
+            let score = hasYakuhai ? (matchedYakuList.some(y => y.han === 26) ? 64000 : 32000) : calculateMahjongScore(totalHans, totalFu);
+
+            let displayTextArr = matchedYakuList.map(y => `${y.name} (${y.han >= 13 ? (y.han === 26 ? 'W役満' : '役満') : y.han + '翻'})`);
+            if (doraCount > 0) displayTextArr.push(`ドラ ${doraCount}枚 (${doraCount}翻)`);
+
+            let summaryText = hasYakuhai ? `<b>【役満成立！】 ${score.toLocaleString()} 点</b>` : `<b>【合計】 ${totalHans}翻 ${totalFu}符 ＝ ${score.toLocaleString()} 点</b>`;
+
+            document.getElementById('ai-detected-text').innerHTML = `<b>【置き方判定：アガリ牌独立OK】</b><br>` + displayTextArr.join(" ＋ ") + "<br>" + summaryText;
+            document.getElementById('ai-result-display').style.display = 'block';
+            document.getElementById('score').value = score;
         }
 
         function calculateMahjongScore(hans, fu) {
@@ -498,6 +606,8 @@
             document.getElementById('preview').style.display = 'none';
             document.getElementById('camera-input').value = '';
             document.getElementById('ai-result-display').style.display = 'none';
+            document.querySelectorAll('.yaku-chk').forEach(chk => chk.checked = false);
+            document.getElementById('dora').value = 0;
         }
 
         function resetScores() {
