@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻雀リアルタイム・スコアボード（置き方完全対応版）</title>
+    <title>麻雀リアルタイム・スコアボード（Gemini自動AI連携版）</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -134,37 +134,10 @@
             margin-bottom: 10px;
             display: none;
         }
-        .yaku-select-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 8px;
-            max-height: 200px;
-            overflow-y: auto;
-            background: #0f172a;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #475569;
-            margin-bottom: 15px;
-            text-align: left;
-        }
-        .yaku-select-grid label {
-            font-size: 13px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: #1e293b;
-            padding: 6px 10px;
-            border-radius: 4px;
-        }
-        .yaku-select-grid input {
-            width: auto;
-            margin: 0;
-        }
         .ai-result-box {
             background: #0f172a;
             border: 1px solid #10b981;
-            padding: 10px;
+            padding: 12px;
             border-radius: 6px;
             margin-bottom: 15px;
             font-size: 14px;
@@ -183,13 +156,15 @@
             text-align: left;
             line-height: 1.5;
         }
-        .placement-guide {
-            background: #0f172a;
-            border: 1px dashed #475569;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            font-size: 13px;
+        .settings-bar {
+            background: #1e293b;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #334155;
         }
     </style>
 </head>
@@ -223,8 +198,25 @@
         </div>
     </div>
 
+    <!-- Gemini API設定モーダル -->
+    <div id="api-modal" class="modal" style="display: none;">
+        <div class="modal-box">
+            <h2>🔑 Gemini APIキーの設定</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">アプリからGeminiに直接写真を読み込ませて自動計算させるために、APIキーを入力してください（ブラウザに安全に保存されます）。</p>
+            <input type="password" id="api-key-input" placeholder="AIzaSy...">
+            <button onclick="saveApiKey()">保存する</button>
+            <button class="secondary" onclick="closeApiModal()">閉じる</button>
+        </div>
+    </div>
+
     <h1>🀄 麻雀リアルタイム・スコアボード</h1>
     
+    <!-- 設定・ログイン情報バー -->
+    <div class="settings-bar">
+        <span style="font-size: 14px; color: var(--text-secondary);">⚙️ Gemini連携ステータス: <b id="api-status-text" style="color:#ef4444;">未設定</b></span>
+        <button class="secondary" style="width: auto; padding: 6px 12px; margin: 0; font-size: 13px;" onclick="openApiModal()">APIキーを設定</button>
+    </div>
+
     <!-- ログイン中プレイヤーの表示 -->
     <div class="big-user-banner">
         <h3>ログイン中のあなた</h3>
@@ -236,26 +228,19 @@
     </div>
 
     <div class="container">
-        <!-- 点数入力・公式役一覧パネル -->
+        <!-- 点数入力・Gemini AI自動判定パネル -->
         <div class="card">
-            <h2>📸 写真撮影 ＆ 置き方認識システム</h2>
+            <h2>✨ Gemini AI 一発自動点数計算</h2>
             <form id="score-form" onsubmit="handleSubmit(event)">
                 <label>① 手牌の写真を撮影 / 選択：</label>
                 <div class="instruction-note">
-                    💡 <b>撮影のルール（重要）：</b><br>
-                    • <b>ポン・チー（鳴き）：</b> 手牌の<b>左側</b>に横向き（またはブロックごと）に置く。<br>
-                    • <b>アガリ牌：</b> 手牌の列の<b>「上（または下）」にポツンと離して1枚だけ横向き</b>に置いて撮影！これでAIがアガリ牌と鳴きを完全に区別します。
+                    💡 <b>撮影のコツ：</b><br>
+                    • <b>ポン・チー（鳴き）：</b> 手牌の<b>左側</b>に横向きで置く。<br>
+                    • <b>アガリ牌：</b> 手牌の列の<b>「上（または下）」にポツンと離して1枚だけ横向き</b>に置く。<br>
+                    この状態でボタンを押すと、Geminiが画像から牌を判別して一発で点数を計算します！
                 </div>
                 <input type="file" accept="image/*" capture="environment" id="camera-input" onchange="previewImage(event)">
                 <img id="preview" class="camera-preview" alt="プレビュー">
-
-                <div class="placement-guide">
-                    <b>📍 置き方の認識確認：</b>
-                    <label style="margin-top: 8px; display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                        <input type="checkbox" id="detected-agari-on-top" style="width: auto; margin: 0;">
-                        <span>列の「上（または下）」にアガリ牌が置かれていると判定する</span>
-                    </label>
-                </div>
 
                 <label>② アガり方：</label>
                 <div class="radio-group">
@@ -270,23 +255,15 @@
                     </select>
                 </div>
 
-                <label>③ 公式役リスト（自動チェック ＆ 手動調整）：</label>
-                <div id="yaku-checkbox-container" class="yaku-select-grid">
-                    <!-- 動的に生成 -->
-                </div>
+                <button type="button" id="ai-calc-btn" onclick="askGeminiToCalculate()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); margin-top: 10px;">🤖 Geminiに写真を送って一発自動計算！</button>
 
-                <label>④ ドラの枚数：</label>
-                <input type="number" id="dora" value="0" min="0" max="13">
-
-                <button type="button" class="secondary" onclick="analyzeByPlacement()" style="background: #3b82f6;">🤖 置き方を解析して役を自動反映</button>
-
-                <!-- AIの判別結果表示エリア -->
+                <!-- Geminiの解析結果表示エリア -->
                 <div id="ai-result-display" class="ai-result-box" style="display: none;">
-                    <strong>【置き方認識・判定結果】</strong><br>
-                    <span id="ai-detected-text">判定待ち...</span>
+                    <strong>【Gemini AI 解析結果】</strong><br>
+                    <span id="ai-detected-text">解析中...</span>
                 </div>
 
-                <label for="score" style="margin-top: 15px;">⑤ 算出した点数（直接書き換えも可能）：</label>
+                <label for="score" style="margin-top: 15px;">③ 算出した点数（直接書き換えも可能）：</label>
                 <input type="number" id="score" placeholder="例: 7700" required>
 
                 <button type="submit">スコアを反映する！</button>
@@ -313,68 +290,6 @@
     </div>
 
     <script>
-        const OFFICIAL_YAKU_LIST = [
-            // 一翻
-            { id: "riichi", name: "立直（リーチ）", han: 1, type: "門前" },
-            { id: "ippatsu", name: "一発", han: 1, type: "門前" },
-            { id: "tsumo", name: "門前清自摸和", han: 1, type: "門前" },
-            { id: "yakuhai", name: "役牌（白・発・中・場風・自風）", han: 1, type: "鳴きOK" },
-            { id: "tanyao", name: "断幺九（タンヤオ）", han: 1, type: "鳴きOK" },
-            { id: "pinfu", name: "平和（ピンフ）", han: 1, type: "門前" },
-            { id: "iipeiko", name: "一盃口（イーペーコー）", han: 1, type: "門前" },
-            { id: "haitei", name: "海底摸月", han: 1, type: "鳴きOK" },
-            { id: "houtei", name: "河底撈魚", han: 1, type: "鳴きOK" },
-            { id: "rinshan", name: "嶺上開花", han: 1, type: "鳴きOK" },
-            { id: "chankan", name: "槍槓", han: 1, type: "鳴きOK" },
-
-            // 二翻
-            { id: "double_riichi", name: "ダブル立直", han: 2, type: "門前" },
-            { id: "sanshoku_doujun", name: "三色同順", han: 2, type: "鳴き一翻" },
-            { id: "sanshoku_doukou", name: "三色同刻", han: 2, type: "鳴きOK" },
-            { id: "sankoutsu", name: "三暗刻", han: 2, type: "鳴きOK" },
-            { id: "ittsuu", name: "一気通貫", han: 2, type: "鳴き一翻" },
-            { id: "chiitoitsu", name: "七対子（チートイツ）", han: 2, type: "門前" },
-            { id: "toitoihou", name: "対々和（トイトイ）", han: 2, type: "鳴きOK" },
-            { id: "chanta", name: "混全帯幺九（チャンタ）", han: 2, type: "鳴き一翻" },
-            { id: "sankantsu", name: "三カンツ", han: 2, type: "鳴きOK" },
-            { id: "open_riichi", name: "オープン立直", han: 2, type: "門前" },
-
-            // 三翻
-            { id: "ryanpeiko", name: "二盃口（リャンペーコー）", han: 3, type: "門前" },
-            { id: "junchan", name: "純全帯幺九（ジュンチャン）", han: 3, type: "鳴き二翻" },
-            { id: "honitsu", name: "混一色（ホンイツ）", han: 3, type: "鳴き二翻" },
-
-            // 四翻
-            { id: "shousangen", name: "小三元", han: 4, type: "鳴きOK" },
-            { id: "honroutou", name: "混老頭", han: 4, type: "鳴きOK" },
-
-            // 五翻
-            { id: "nagashimangan", name: "流し満貫", han: 5, type: "鳴きOK" },
-
-            // 六翻
-            { id: "chinitsu", name: "清一色（チンイツ）", han: 6, type: "鳴き五翻" },
-
-            // 役満
-            { id: "suuankou", name: "【役満】四暗刻", han: 13, type: "門前" },
-            { id: "daisangen", name: "【役満】大三元", han: 13, type: "鳴きOK" },
-            { id: "kokushi", name: "【役満】国士無双", han: 13, type: "門前" },
-            { id: "ryuuiisou", name: "【役満】緑一色", han: 13, type: "鳴きOK" },
-            { id: "tsuuiisou", name: "【役満】字一色", han: 13, type: "鳴きOK" },
-            { id: "chinroutou", name: "【役満】清老頭", han: 13, type: "鳴きOK" },
-            { id: "suukantsu", name: "【役満】四カンツ", han: 13, type: "鳴きOK" },
-            { id: "shousuushii", name: "【役満】小四喜", han: 13, type: "鳴きOK" },
-            { id: "daisuushii", name: "【役満】大四喜", han: 13, type: "鳴きOK" },
-            { id: "chuuren_poutou", name: "【役満】九蓮宝燈", han: 13, type: "門前" },
-            { id: "chiihou", name: "【役満】地和", han: 13, type: "門前" },
-            { id: "tenhou", name: "【役満】天和", han: 13, type: "門前" },
-
-            // W役満
-            { id: "suuankou_tankan", name: "【W役満】四暗刻単騎", han: 26, type: "門前" },
-            { id: "kokushi_13machi", name: "【W役満】国士無双13面待ち", han: 26, type: "門前" },
-            { id: "jun_chuuren", name: "【W役満】純正九蓮宝燈", han: 26, type: "門前" },
-            { id: "tsunashi_ryuuiisou", name: "【W役満】発なし緑一色", han: 26, type: "鳴きOK" }
-        ];
-
         let players = JSON.parse(localStorage.getItem('mahjong_players')) || [
             { name: "プレイヤー1", points: 25000 },
             { name: "プレイヤー2", points: 25000 },
@@ -385,9 +300,10 @@
         ];
 
         let mySlotIndex = localStorage.getItem('mahjong_my_slot');
+        let geminiApiKey = localStorage.getItem('gemini_api_key') || '';
 
         window.onload = function() {
-            initYakuCheckboxes();
+            updateApiStatus();
             if (mySlotIndex !== null && players[mySlotIndex]) {
                 applyUserSession(parseInt(mySlotIndex));
             } else {
@@ -395,17 +311,35 @@
             }
         };
 
-        function initYakuCheckboxes() {
-            let container = document.getElementById('yaku-checkbox-container');
-            container.innerHTML = '';
-            OFFICIAL_YAKU_LIST.forEach(yaku => {
-                let label = document.createElement('label');
-                label.innerHTML = `
-                    <span>${yaku.name} <small style="color:var(--text-secondary);">(${yaku.han >= 13 ? (yaku.han === 26 ? 'W役満' : '役満') : yaku.han + '翻'} / ${yaku.type})</small></span>
-                    <input type="checkbox" class="yaku-chk" value="${yaku.id}" onchange="calculateFromCheckboxes()">
-                `;
-                container.appendChild(label);
-            });
+        function updateApiStatus() {
+            let statusText = document.getElementById('api-status-text');
+            if (geminiApiKey) {
+                statusText.innerText = "設定済み (Ready)";
+                statusText.style.color = "#10b981";
+            } else {
+                statusText.innerText = "未設定";
+                statusText.style.color = "#ef4444";
+            }
+        }
+
+        function openApiModal() {
+            document.getElementById('api-key-input').value = geminiApiKey;
+            document.getElementById('api-modal').style.display = 'flex';
+        }
+
+        function closeApiModal() {
+            document.getElementById('api-modal').style.display = 'none';
+        }
+
+        function saveApiKey() {
+            let key = document.getElementById('api-key-input').value.trim();
+            if (key) {
+                geminiApiKey = key;
+                localStorage.setItem('gemini_api_key', key);
+                updateApiStatus();
+                closeApiModal();
+                alert("APIキーを保存しました！");
+            }
         }
 
         function setMySlot() {
@@ -477,98 +411,107 @@
                 let output = document.getElementById('preview');
                 output.src = reader.result;
                 output.style.display = 'block';
-                // プレビュー表示時に、列の上にあるアガリ牌のチェックボックスをONにする（シミュレーション用）
-                document.getElementById('detected-agari-on-top').checked = true;
             };
             reader.readAsDataURL(event.target.files[0]);
         }
 
-        // 置き方（上部にアガリ牌があるかどうかなど）を解析して役を自動反映
-        function analyzeByPlacement() {
+        // Gemini APIに画像を送信して自動点数計算を行う核心関数
+        async function askGeminiToCalculate() {
+            if (!geminiApiKey) {
+                alert("GeminiのAPIキーが設定されていません。上部の「APIキーを設定」ボタンからキーを入力してください。");
+                openApiModal();
+                return;
+            }
+
             let fileInput = document.getElementById('camera-input');
             if (fileInput.files.length === 0) {
                 alert("まずは手牌の写真を撮影または選択してください！");
                 return;
             }
 
-            let btn = event.target;
-            btn.innerText = "🤖 アガリ牌と鳴きの位置関係を解析中...";
+            let btn = document.getElementById('ai-calc-btn');
+            let resultBox = document.getElementById('ai-result-display');
+            let detectedText = document.getElementById('ai-detected-text');
 
-            setTimeout(() => {
-                let isOnTop = document.getElementById('detected-agari-on-top').checked;
-                let fileSize = fileInput.files[0].size;
+            btn.disabled = true;
+            btn.innerText = "🔄 Geminiが画像を解析中...";
+            resultBox.style.display = 'block';
+            detectedText.innerHTML = "画像を解析して役と点数を計算しています...";
 
-                // チェックを一旦クリア
-                document.querySelectorAll('.yaku-chk').forEach(chk => chk.checked = false);
+            try {
+                let base64Image = await fileToBase64(fileInput.files[0]);
+                let base64Data = base64Image.split(',')[1];
+                let mimeType = fileInput.files[0].type || "image/jpeg";
 
-                // アガリ牌が上にあることが確認できたら、正しくアガリ形として処理を構築
-                let targetIndex = fileSize % OFFICIAL_YAKU_LIST.length;
-                let selectedYaku = OFFICIAL_YAKU_LIST[targetIndex];
+                // Gemini 2.5 Flash APIへのリクエスト構築
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiApiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                {
+                                    text: `あなたは麻雀のプロ審判です。提供された手牌の画像から成立している役を判定し、点数を計算してください。
+ルール補足：
+- 左側にある横向きの牌ブロックは「ポン・チー（鳴き）」です。
+- 列の上（または下）にポツンと独立して横向きに置かれている牌は「アガリ牌」です。
+以下のJSON形式のみで正確に回答してください。他の文章は一切含めないでください。
+{
+  "yakuNames": ["役名1", "役名2"],
+  "totalHans": 翻数(数値),
+  "totalFu": 符数(数値),
+  "score": 点数(数値, ロンアガリの基本得点または満貫などの支払い点数),
+  "comment": "判定の解説文"
+}`
+                                },
+                                {
+                                    inline_data: {
+                                        mime_type: mimeType,
+                                        data: base64Data
+                                    }
+                                }
+                            ]
+                        }]
+                    })
+                });
 
-                let targetChk = document.querySelector(`.yaku-chk[value="${selectedYaku.id}"]`);
-                if (targetChk) targetChk.checked = true;
-
-                // 置き方認識のログをメッセージに反映
-                let statusMsg = isOnTop ? "✅ アガリ牌が列の上に正しく独立して置かれていると認識しました。" : "⚠️ 手牌の列の中にアガリ牌が埋もれています。";
-
-                calculateFromCheckboxes();
-                btn.innerText = "🤖 置き方を解析して役を自動反映";
-            }, 800);
-        }
-
-        function calculateFromCheckboxes() {
-            let checkedBoxes = document.querySelectorAll('.yaku-chk:checked');
-            let matchedYakuList = [];
-            let totalHans = 0;
-            let isChiitoi = false;
-
-            checkedBoxes.forEach(chk => {
-                let yakuData = OFFICIAL_YAKU_LIST.find(y => y.id === chk.value);
-                if (yakuData) {
-                    matchedYakuList.push(yakuData);
-                    totalHans += yakuData.han;
-                    if (yakuData.id === 'chiitoitsu') isChiitoi = true;
+                if (!response.ok) {
+                    throw new Error(`APIエラー: ${response.status} ${response.statusText}`);
                 }
-            });
 
-            let doraCount = parseInt(document.getElementById('dora').value) || 0;
-            totalHans += doraCount;
+                const data = await response.json();
+                let rawText = data.candidates[0].content.parts[0].text;
+                
+                // JSONのクレンジング
+                rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+                let parsedResult = JSON.parse(rawText);
 
-            if (matchedYakuList.length === 0 && doraCount === 0) {
-                document.getElementById('ai-result-display').style.display = 'none';
-                document.getElementById('score').value = '';
-                return;
+                detectedText.innerHTML = `
+                    <b>成立役:</b> ${parsedResult.yakuNames.join(', ')}<br>
+                    <b>翻・符:</b> ${parsedResult.totalHans}翻 ${parsedResult.totalFu}符<br>
+                    <b>計算点数:</b> <span style="font-size:16px; color:#fff;"><b>${parsedResult.score.toLocaleString()} 点</b></span><br>
+                    <small style="color:var(--text-secondary);">${parsedResult.comment}</small>
+                `;
+
+                document.getElementById('score').value = parsedResult.score;
+                btn.disabled = false;
+                btn.innerText = "🤖 Geminiに写真を送って一発自動計算！";
+
+            } catch (error) {
+                console.error(error);
+                detectedText.innerHTML = `<span style="color:#ef4444;">解析に失敗しました: ${error.message}</span>`;
+                btn.disabled = false;
+                btn.innerText = "🤖 Geminiに写真を送って一発自動計算！";
             }
-
-            let totalFu = 30;
-            if (isChiitoi) totalFu = 25;
-            let hasYakuhai = matchedYakuList.some(y => y.han >= 13);
-            let score = hasYakuhai ? (matchedYakuList.some(y => y.han === 26) ? 64000 : 32000) : calculateMahjongScore(totalHans, totalFu);
-
-            let displayTextArr = matchedYakuList.map(y => `${y.name} (${y.han >= 13 ? (y.han === 26 ? 'W役満' : '役満') : y.han + '翻'})`);
-            if (doraCount > 0) displayTextArr.push(`ドラ ${doraCount}枚 (${doraCount}翻)`);
-
-            let summaryText = hasYakuhai ? `<b>【役満成立！】 ${score.toLocaleString()} 点</b>` : `<b>【合計】 ${totalHans}翻 ${totalFu}符 ＝ ${score.toLocaleString()} 点</b>`;
-
-            document.getElementById('ai-detected-text').innerHTML = `<b>【置き方判定：アガリ牌独立OK】</b><br>` + displayTextArr.join(" ＋ ") + "<br>" + summaryText;
-            document.getElementById('ai-result-display').style.display = 'block';
-            document.getElementById('score').value = score;
         }
 
-        function calculateMahjongScore(hans, fu) {
-            if (hans >= 13) return 32000;
-            if (hans >= 11) return 24000;
-            if (hans >= 8) return 16000;
-            if (hans >= 6) return 12000;
-            if (hans === 5) return 8000;
-
-            let base = fu * Math.pow(2, hans + 2);
-            if (base >= 2000) {
-                return 8000;
-            }
-            let score = Math.ceil(base * 4 / 100) * 100;
-            if (score > 7700) score = 8000;
-            return score;
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                let reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
         }
 
         function handleSubmit(event) {
@@ -606,8 +549,6 @@
             document.getElementById('preview').style.display = 'none';
             document.getElementById('camera-input').value = '';
             document.getElementById('ai-result-display').style.display = 'none';
-            document.querySelectorAll('.yaku-chk').forEach(chk => chk.checked = false);
-            document.getElementById('dora').value = 0;
         }
 
         function resetScores() {
