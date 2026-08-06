@@ -75,8 +75,8 @@
         }
         th { color: var(--text-secondary); }
         
-        /* ログイン画面用モーダル */
-        #login-modal {
+        /* モーダル共通 */
+        .modal {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(15, 23, 42, 0.95);
@@ -85,7 +85,7 @@
             align-items: center;
             z-index: 1000;
         }
-        .login-box {
+        .modal-box {
             background: var(--card-bg);
             padding: 30px;
             border-radius: 12px;
@@ -93,7 +93,7 @@
             max-width: 400px;
             text-align: center;
         }
-        /* ログイン中の巨大バナー */
+        /* ログイン中バナー */
         .big-user-banner {
             background: linear-gradient(135deg, #10b981, #059669);
             color: white;
@@ -113,34 +113,53 @@
             font-weight: bold;
             margin: 5px 0 0 0;
         }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
 
-    <!-- 初回ログイン画面 -->
-    <div id="login-modal">
-        <div class="login-box">
+    <!-- 初回ログイン・選択画面 -->
+    <div id="login-modal" class="modal">
+        <div class="modal-box">
             <h2>🀄 プレイヤー選択</h2>
-            <p style="color: var(--text-secondary); font-size: 14px;">あなたの名前（番号）を選んでください。<br>次回からこの端末では自動で認識されます。</p>
-            <select id="select-my-name">
-                <option value="プレイヤー1">プレイヤー1</option>
-                <option value="プレイヤー2">プレイヤー2</option>
-                <option value="プレイヤー3">プレイヤー3</option>
-                <option value="プレイヤー4">プレイヤー4</option>
-                <option value="プレイヤー5">プレイヤー5</option>
-                <option value="プレイヤー6">プレイヤー6</option>
+            <p style="color: var(--text-secondary); font-size: 14px;">自分の番号を選んで参加してください。<br>あとから好きな名前に変更できます。</p>
+            <select id="select-slot">
+                <option value="0">プレイヤー1</option>
+                <option value="1">プレイヤー2</option>
+                <option value="2">プレイヤー3</option>
+                <option value="3">プレイヤー4</option>
+                <option value="4">プレイヤー5</option>
+                <option value="5">プレイヤー6</option>
             </select>
-            <button onclick="setMyUser()">このプレイヤーとして参加</button>
+            <button onclick="setMySlot()">この枠で参加する</button>
+        </div>
+    </div>
+
+    <!-- 名前変更モーダル（初期は非表示） -->
+    <div id="rename-modal" class="modal" style="display: none;">
+        <div class="modal-box">
+            <h2>✏️ 名前の変更</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">あなたの表示名を入力してください。</p>
+            <input type="text" id="new-name-input" placeholder="例: けんてぃ">
+            <button onclick="saveNewName()">名前に反映する</button>
+            <button class="secondary" onclick="closeRenameModal()">キャンセル</button>
         </div>
     </div>
 
     <h1>🀄 麻雀リアルタイム・スコアボード</h1>
     
-    <!-- ログイン中プレイヤーの巨大表示 -->
+    <!-- ログイン中プレイヤーの表示 -->
     <div class="big-user-banner">
         <h3>ログイン中のあなた</h3>
         <div class="user-name-large" id="current-user-display">未設定</div>
-        <button class="secondary" style="width: auto; padding: 4px 12px; font-size: 12px; margin-top: 10px; background: rgba(0,0,0,0.3);" onclick="switchUser()">プレイヤーを切り替える</button>
+        <div class="button-group">
+            <button class="secondary" style="background: rgba(0,0,0,0.3); font-size: 12px;" onclick="openRenameModal()">名前を変更する</button>
+            <button class="secondary" style="background: rgba(0,0,0,0.3); font-size: 12px;" onclick="switchUser()">別の人として入り直す</button>
+        </div>
     </div>
 
     <div class="container">
@@ -185,7 +204,8 @@
     </div>
 
     <script>
-        let players = [
+        // 6人分のスロットデータ（名前とポイント）
+        let players = JSON.parse(localStorage.getItem('mahjong_players')) || [
             { name: "プレイヤー1", points: 25000 },
             { name: "プレイヤー2", points: 25000 },
             { name: "プレイヤー3", points: 25000 },
@@ -194,63 +214,93 @@
             { name: "プレイヤー6", points: 25000 }
         ];
 
-        let myName = "";
+        let mySlotIndex = localStorage.getItem('mahjong_my_slot');
 
         window.onload = function() {
-            const savedUser = localStorage.getItem('mahjong_my_name');
-            if (savedUser) {
-                applyUserSession(savedUser);
+            if (mySlotIndex !== null && players[mySlotIndex]) {
+                applyUserSession(parseInt(mySlotIndex));
+            } else {
+                document.getElementById('login-modal').style.display = 'flex';
             }
         };
 
-        function setMyUser() {
-            const selectedName = document.getElementById('select-my-name').value;
-            localStorage.setItem('mahjong_my_name', selectedName);
-            applyUserSession(selectedName);
+        function setMySlot() {
+            const slot = document.getElementById('select-slot').value;
+            localStorage.setItem('mahjong_my_slot', slot);
+            applyUserSession(parseInt(slot));
         }
 
-        function applyUserSession(name) {
-            myName = name;
+        function applyUserSession(index) {
+            mySlotIndex = index;
             document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('current-user-display').innerText = name;
+            document.getElementById('current-user-display').innerText = players[index].name;
+            updateRanking();
         }
 
         function switchUser() {
-            localStorage.removeItem('mahjong_my_name');
+            localStorage.removeItem('mahjong_my_slot');
             document.getElementById('login-modal').style.display = 'flex';
+        }
+
+        function openRenameModal() {
+            document.getElementById('new-name-input').value = players[mySlotIndex].name;
+            document.getElementById('rename-modal').style.display = 'flex';
+        }
+
+        function closeRenameModal() {
+            document.getElementById('rename-modal').style.display = 'none';
+        }
+
+        function saveNewName() {
+            const newName = document.getElementById('new-name-input').value.trim();
+            if (newName) {
+                players[mySlotIndex].name = newName;
+                saveData();
+                document.getElementById('current-user-display').innerText = newName;
+                updateRanking();
+                closeRenameModal();
+            }
         }
 
         function handleSubmit(event) {
             event.preventDefault();
             const scoreInput = parseInt(document.getElementById('score').value);
 
-            let p = players.find(item => item.name === myName);
-            if(p) {
-                p.points += scoreInput;
-            }
-
+            players[mySlotIndex].points += scoreInput;
+            saveData();
             updateRanking();
             document.getElementById('score').value = '';
-            alert(`(${myName}) に ${scoreInput} 点を追加しました！`);
+            alert(`(${players[mySlotIndex].name}) に ${scoreInput} 点を追加しました！`);
+        }
+
+        function resetScores() {
+            if (confirm("本当にポイントを初期状態（25,000点）にリセットしますか？")) {
+                players.forEach(p => p.points = 25000);
+                saveData();
+                updateRanking();
+                alert("リセットしました！");
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('mahjong_players', JSON.stringify(players));
         }
 
         function updateRanking() {
-            let sorted = [...players].sort((a, b) => b.points - a.points);
+            let sorted = [...players].map((p, index) => ({ ...p, originalIndex: index })).sort((a, b) => b.points - a.points);
             let tbody = document.getElementById('ranking-body');
             tbody.innerHTML = '';
 
-            sorted.forEach((p, index) => {
+            sorted.forEach((p, rank) => {
                 let tr = document.createElement('tr');
-                // 順位表で自分自身の色を目立たせる装飾
-                if (p.name === myName) {
+                let isMe = (p.originalIndex === parseInt(mySlotIndex));
+                if (isMe) {
                     tr.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
                 }
-                tr.innerHTML = `<td>${index + 1}位</td><td>${p.name} ${p.name === myName ? '（自分）' : ''}</td><td>${p.points.toLocaleString()} 点</td>`;
+                tr.innerHTML = `<td>${rank + 1}位</td><td>${p.name} ${isMe ? '（自分）' : ''}</td><td>${p.points.toLocaleString()} 点</td>`;
                 tbody.appendChild(tr);
             });
         }
-
-        updateRanking();
     </script>
 </body>
 </html>
