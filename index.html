@@ -75,7 +75,6 @@
         }
         th { color: var(--text-secondary); }
         
-        /* モーダル共通 */
         .modal {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -93,7 +92,6 @@
             max-width: 400px;
             text-align: center;
         }
-        /* ログイン中バナー */
         .big-user-banner {
             background: linear-gradient(135deg, #10b981, #059669);
             color: white;
@@ -118,6 +116,16 @@
             gap: 10px;
             margin-top: 10px;
         }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+        .radio-group label {
+            cursor: pointer;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
@@ -139,7 +147,7 @@
         </div>
     </div>
 
-    <!-- 名前変更モーダル（初期は非表示） -->
+    <!-- 名前変更モーダル -->
     <div id="rename-modal" class="modal" style="display: none;">
         <div class="modal-box">
             <h2>✏️ 名前の変更</h2>
@@ -165,22 +173,25 @@
     <div class="container">
         <!-- 点数入力パネル -->
         <div class="card">
-            <h2>📝 点数入力</h2>
+            <h2>📝 点数入力（自分がアガった時）</h2>
             <form id="score-form" onsubmit="handleSubmit(event)">
-                <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 10px;">
-                    ※あなたがアガったとして計算されます。
-                </p>
+                <label>アガり方：</label>
+                <div class="radio-group">
+                    <label><input type="radio" name="method" value="ron" checked onchange="toggleLoserField()"> ロン</label>
+                    <label><input type="radio" name="method" value="tsumo" onchange="toggleLoserField()"> ツモ</label>
+                </div>
 
-                <label for="method">アガり方：</label>
-                <select id="method">
-                    <option value="ron">ロン</option>
-                    <option value="tsumo">ツモ</option>
-                </select>
+                <div id="loser-container">
+                    <label for="loser">放銃者（振り込んだ人）：</label>
+                    <select id="loser">
+                        <!-- 動的にJavaScriptで生成 -->
+                    </select>
+                </div>
 
-                <label for="score">点数（翻数・符など）：</label>
-                <input type="number" id="score" placeholder="例: 7700 または 3900" required>
+                <label for="score">アガリ点数（基本点、例: 7700, 3900, 12000）：</label>
+                <input type="number" id="score" placeholder="例: 7700" required>
 
-                <button type="submit">自分がアガった！スコアを送信</button>
+                <button type="submit">スコアを反映する！</button>
             </form>
             <button class="secondary" onclick="resetScores()">リセット</button>
         </div>
@@ -204,7 +215,6 @@
     </div>
 
     <script>
-        // 6人分のスロットデータ（名前とポイント）
         let players = JSON.parse(localStorage.getItem('mahjong_players')) || [
             { name: "プレイヤー1", points: 25000 },
             { name: "プレイヤー2", points: 25000 },
@@ -234,6 +244,7 @@
             mySlotIndex = index;
             document.getElementById('login-modal').style.display = 'none';
             document.getElementById('current-user-display').innerText = players[index].name;
+            updateLoserOptions();
             updateRanking();
         }
 
@@ -257,20 +268,70 @@
                 players[mySlotIndex].name = newName;
                 saveData();
                 document.getElementById('current-user-display').innerText = newName;
+                updateLoserOptions();
                 updateRanking();
-                closeRenameModal();
+5                closeRenameModal();
+            }
+        }
+
+        function updateLoserOptions() {
+            let loserSelect = document.getElementById('loser');
+            loserSelect.innerHTML = '';
+            players.forEach((p, index) => {
+                // 自分以外のプレイヤーを放銃者候補にする
+                if (index !== parseInt(mySlotIndex)) {
+                    let opt = document.createElement('option');
+                    opt.value = index;
+                    opt.text = p.name;
+                    loserSelect.appendChild(opt);
+                }
+            });
+        }
+
+        function toggleLoserField() {
+            let method = document.querySelector('input[name="method"]:checked').value;
+            let loserContainer = document.getElementById('loser-container');
+            if (method === 'ron') {
+                loserContainer.style.display = 'block';
+            } else {
+                loserContainer.style.display = 'none';
             }
         }
 
         function handleSubmit(event) {
             event.preventDefault();
-            const scoreInput = parseInt(document.getElementById('score').value);
+            let method = document.querySelector('input[name="method"]:checked').value;
+            let scoreInput = parseInt(document.getElementById('score').value);
 
-            players[mySlotIndex].points += scoreInput;
+            if (isNaN(scoreInput) || scoreInput <= 0) {
+                alert("正しい点数を入力してください。");
+                return;
+            }
+
+            if (method === 'ron') {
+                // ロンの場合：放銃者から全額もらう
+                let loserIndex = parseInt(document.getElementById('loser').value);
+                players[mySlotIndex].points += scoreInput;
+                players[loserIndex].points -= scoreInput;
+                alert(`${players[loserIndex].name} から ${scoreInput.toLocaleString()} 点を奪取しました！`);
+            } else {
+                // ツモの場合：自分以外（残り5人）から均等に割り勘で徴収する（簡易計算）
+                let splitScore = Math.ceil(scoreInput / 5 / 100) * 100; // 100点単位で切り上げ
+                let totalCollected = 0;
+
+                players.forEach((p, index) => {
+                    if (index !== parseInt(mySlotIndex)) {
+                        p.points -= splitScore;
+                        totalCollected += splitScore;
+                    }
+                });
+                players[mySlotIndex].points += totalCollected;
+                alert(`ツモ！全員から合計 ${totalCollected.toLocaleString()} 点を獲得しました！`);
+            }
+
             saveData();
             updateRanking();
             document.getElementById('score').value = '';
-            alert(`(${players[mySlotIndex].name}) に ${scoreInput} 点を追加しました！`);
         }
 
         function resetScores() {
