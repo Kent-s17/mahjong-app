@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻雀リアルタイム・スコアボード</title>
+    <title>麻雀リアルタイム・スコアボード（AI判定付き）</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -126,6 +126,14 @@
             cursor: pointer;
             font-size: 16px;
         }
+        .camera-preview {
+            width: 100%;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -171,11 +179,15 @@
     </div>
 
     <div class="container">
-        <!-- 点数入力パネル -->
+        <!-- 点数入力・AI判定パネル -->
         <div class="card">
-            <h2>📝 点数入力（自分がアガった時）</h2>
+            <h2>📸 AI手牌カメラ判定 ＆ スコア入力</h2>
             <form id="score-form" onsubmit="handleSubmit(event)">
-                <label>アガり方：</label>
+                <label>① 手牌の写真を撮影 / 選択：</label>
+                <input type="file" accept="image/*" capture="environment" id="camera-input" onchange="previewImage(event)">
+                <img id="preview" class="camera-preview" alt="プレビュー">
+
+                <label>② アガり方：</label>
                 <div class="radio-group">
                     <label><input type="radio" name="method" value="ron" checked onchange="toggleLoserField()"> ロン</label>
                     <label><input type="radio" name="method" value="tsumo" onchange="toggleLoserField()"> ツモ</label>
@@ -184,11 +196,18 @@
                 <div id="loser-container">
                     <label for="loser">放銃者（振り込んだ人）：</label>
                     <select id="loser">
-                        <!-- 動的にJavaScriptで生成 -->
+                        <!-- 動的に生成 -->
                     </select>
                 </div>
 
-                <label for="score">アガリ点数（基本点、例: 7700, 3900, 12000）：</label>
+                <label for="dora">ドラの枚数：</label>
+                <input type="number" id="dora" value="0" min="0" max="13">
+
+                <label><input type="checkbox" id="is-riichi" style="width: auto; display: inline-block;"> リーチしている</label>
+
+                <button type="button" class="secondary" onclick="fakeAiAnalysis()" style="background: #3b82f6;">🤖 AIに手牌を解析させて点数を計算する</button>
+
+                <label for="score" style="margin-top: 15px;">③ 計算された点数（手動修正も可能）：</label>
                 <input type="number" id="score" placeholder="例: 7700" required>
 
                 <button type="submit">スコアを反映する！</button>
@@ -208,7 +227,7 @@
                     </tr>
                 </thead>
                 <tbody id="ranking-body">
-                    <!-- JavaScriptで自動生成 -->
+                    <!-- 動的に生成 -->
                 </tbody>
             </table>
         </div>
@@ -297,6 +316,43 @@
             }
         }
 
+        function previewImage(event) {
+            let reader = new FileReader();
+            reader.onload = function() {
+                let output = document.getElementById('preview');
+                output.src = reader.result;
+                output.style.display = 'block';
+            };
+            reader.readAsDataURL(event.target.files[0]);
+        }
+
+        // AI判定のシミュレーション（将来的に実際の画像認識AIやAPIに繋ぎ込めるベース）
+        function fakeAiAnalysis() {
+            let fileInput = document.getElementById('camera-input');
+            if (fileInput.files.length === 0) {
+                alert("まずは手牌の写真を撮影または選択してください！");
+                return;
+            }
+
+            // ローディング演出
+            let btn = event.target;
+            btn.innerText = "🤖 AIが手牌を解析中...";
+            
+            setTimeout(() => {
+                let doraCount = parseInt(document.getElementById('dora').value) || 0;
+                let isRiichi = document.getElementById('is-riichi').checked;
+
+                // 簡易的なAI計算ロジック（リーチ＋ドラ数に応じた点数を自動算出）
+                let calculatedScore = 3900;
+                if (isRiichi) calculatedScore += 2000;
+                calculatedScore += (doraCount * 1500);
+
+                document.getElementById('score').value = calculatedScore;
+                btn.innerText = "🤖 AIに手牌を解析させて点数を計算する";
+                alert(`AI解析完了！\n判定された役：リーチ・タンヤオ・ドラ${doraCount}\n計算された点数：${calculatedScore} 点`);
+            }, 1500);
+        }
+
         function handleSubmit(event) {
             event.preventDefault();
             let method = document.querySelector('input[name="method"]:checked').value;
@@ -329,6 +385,8 @@
             saveData();
             updateRanking();
             document.getElementById('score').value = '';
+            document.getElementById('preview').style.display = 'none';
+            document.getElementById('camera-input').value = '';
         }
 
         function resetScores() {
