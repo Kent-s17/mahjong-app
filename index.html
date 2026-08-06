@@ -312,7 +312,7 @@
         }
 
         function saveNewName() {
-            const newName = document.getElementById('new-name-input'].value.trim();
+            const newName = document.getElementById('new-name-input').value.trim();
             if (newName) {
                 players[mySlotIndex].name = newName;
                 saveData();
@@ -379,22 +379,21 @@
                 // 翻数の計算
                 let hans = 0;
                 if (isRiichi) hans += 1;
-                if (isChiitoi) { hans += 2; } // 七対子は基本2翻
+                if (isChiitoi) { hans += 2; }
                 if (isTanyao) hans += 1;
                 if (isPinfu) hans += 1;
                 if (isToitoi) hans += 2;
                 if (isHonitsu) hans += 3;
                 hans += doraCount;
 
-                if (hans === 0) hans = 1; // 最低1翻
+                if (hans === 0) hans = 1;
 
-                // 符の決定（七対子は固定25符、他は簡易的に30〜40符ベースで計算）
+                // 符の決定
                 let fu = 30;
                 if (isChiitoi) fu = 25;
                 if (isPinfu) fu = 30;
                 if (isToitoi) fu = 40;
 
-                // 麻雀の基本点数計算（子・ロンの場合の早見ロジック）
                 let score = calculateMahjongScore(hans, fu);
 
                 document.getElementById('score').value = score;
@@ -403,23 +402,19 @@
             }, 1000);
         }
 
-        // 麻雀の厳密な点数算出（子・ロン基準の一般的な丸め計算）
         function calculateMahjongScore(hans, fu) {
-            if (hans >= 13) return 32000; // 役満
-            if (hans >= 11) return 24000; // 三倍満
-            if (hans >= 8) return 16000;  // 倍満
-            if (hans >= 6) return 12000;  // 跳満
-            
-            if (hans === 5) return 8000;  // 満貫
+            if (hans >= 13) return 32000;
+            if (hans >= 11) return 24000;
+            if (hans >= 8) return 16000;
+            if (hans >= 6) return 12000;
+            if (hans === 5) return 8000;
 
-            // 1〜4翻の計算
             let base = fu * Math.pow(2, hans + 2);
             if (base >= 2000) {
-                return 8000; // 満貫上限
+                return 8000;
             }
-            // 100点単位で切り上げ
             let score = Math.ceil(base * 4 / 100) * 100;
-            if (score > 7700) score = 8000; // 満貫で頭打ち
+            if (score > 7700) score = 8000;
             return score;
         }
 
