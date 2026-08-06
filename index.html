@@ -270,7 +270,7 @@
                 document.getElementById('current-user-display').innerText = newName;
                 updateLoserOptions();
                 updateRanking();
-5                closeRenameModal();
+                closeRenameModal();
             }
         }
 
@@ -278,7 +278,6 @@
             let loserSelect = document.getElementById('loser');
             loserSelect.innerHTML = '';
             players.forEach((p, index) => {
-                // 自分以外のプレイヤーを放銃者候補にする
                 if (index !== parseInt(mySlotIndex)) {
                     let opt = document.createElement('option');
                     opt.value = index;
@@ -309,14 +308,12 @@
             }
 
             if (method === 'ron') {
-                // ロンの場合：放銃者から全額もらう
                 let loserIndex = parseInt(document.getElementById('loser').value);
                 players[mySlotIndex].points += scoreInput;
                 players[loserIndex].points -= scoreInput;
                 alert(`${players[loserIndex].name} から ${scoreInput.toLocaleString()} 点を奪取しました！`);
             } else {
-                // ツモの場合：自分以外（残り5人）から均等に割り勘で徴収する（簡易計算）
-                let splitScore = Math.ceil(scoreInput / 5 / 100) * 100; // 100点単位で切り上げ
+                let splitScore = Math.ceil(scoreInput / 5 / 100) * 100;
                 let totalCollected = 0;
 
                 players.forEach((p, index) => {
