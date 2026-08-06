@@ -49,6 +49,10 @@
             margin-top: 10px;
         }
         button:hover { opacity: 0.9; }
+        button.secondary {
+            background-color: #475569;
+            margin-top: 5px;
+        }
         input, select {
             width: 100%;
             padding: 10px;
@@ -70,41 +74,90 @@
             border-bottom: 1px solid #334155;
         }
         th { color: var(--text-secondary); }
+        /* ログイン画面用モーダル */
+        #login-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .login-box {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .user-badge {
+            background: #334155;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
 
+    <!-- 初回ログイン（プレイヤー選択）画面 -->
+    <div id="login-modal">
+        <div class="login-box">
+            <h2>🀄 プレイヤー選択</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">あなたの名前（または番号）を選んでください。<br>次回から自動で記憶されます。</p>
+            <select id="select-my-name">
+                <option value="プレイヤー1">プレイヤー1</option>
+                <option value="プレイヤー2">プレイヤー2</option>
+                <option value="プレイヤー3">プレイヤー3</option>
+                <option value="プレイヤー4">プレイヤー4</option>
+                <option value="プレイヤー5">プレイヤー5</option>
+                <option value="プレイヤー6">プレイヤー6</option>
+            </select>
+            <button onclick="setMyUser()">このプレイヤーとして参加</button>
+        </div>
+    </div>
+
     <h1>🀄 麻雀リアルタイム・スコアボード</h1>
+    
+    <div style="text-align: center; margin-bottom: 15px;">
+        <span class="user-badge" id="current-user-display">ログイン中: 未設定</span>
+        <button class="secondary" style="width: auto; padding: 4px 10px; font-size: 12px; margin-left: 10px;" onclick="switchUser()">プレイヤーを切り替える</button>
+    </div>
 
     <div class="container">
-        <!-- スマホ用：点数入力パネル -->
+        <!-- 点数入力パネル -->
         <div class="card">
             <h2>📝 点数入力</h2>
-            <form id="score-form">
-                <label>アガった人:</label>
+            <form id="score-form" onsubmit="handleSubmit(event)">
+                <label for="winner">アガった人：</label>
                 <select id="winner">
                     <option value="プレイヤー1">プレイヤー1</option>
                     <option value="プレイヤー2">プレイヤー2</option>
                     <option value="プレイヤー3">プレイヤー3</option>
                     <option value="プレイヤー4">プレイヤー4</option>
+                    <option value="プレイヤー5">プレイヤー5</option>
+                    <option value="プレイヤー6">プレイヤー6</option>
                 </select>
 
-                <label>アガリ方:</label>
-                <select id="win-type">
+                <label for="method">アガり方：</label>
+                <select id="method">
                     <option value="ron">ロン</option>
                     <option value="tsumo">ツモ</option>
                 </select>
 
-                <label>点数（翻数・符など）:</label>
-                <input type="number" id="points" placeholder="例: 7700 または 3900" required>
+                <label for="score">点数（翻数・符など）：</label>
+                <input type="number" id="score" placeholder="例: 7700 または 3900" required>
 
                 <button type="submit">スコアを確定して送信！</button>
             </form>
-            <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
-            <button style="background-color: #ef4444;" onclick="resetData()">リセット</button>
+            <button class="secondary" onclick="resetScores()">リセット</button>
         </div>
 
-        <!-- パソコン用：もりもりレート・順位表示パネル -->
+        <!-- リアルタイム順位表 -->
         <div class="card">
             <h2>🏆 リアルタイム順位表</h2>
             <table>
@@ -114,68 +167,81 @@
                         <th>名前</th>
                         <th>トータルポイント</th>
                     </tr>
-                </thead>
-                <table id="ranking-table">
-                    <!-- JavaScriptで動的に書き換え -->
-                </table>
+                <tbody id="ranking-body">
+                    <!-- JavaScriptで自動生成 -->
+                </tbody>
             </table>
         </div>
     </div>
 
     <script>
-        // ローカルストレージを使った簡易同期（クラウド連携のベース）
+        // 6人分のデータを管理
         let players = [
-            { name: "プレイヤー1", score: 25000 },
-            { name: "プレイヤー2", score: 25000 },
-            { name: "プレイヤー3", score: 25000 },
-            { name: "プレイヤー4", score: 25000 }
+            { name: "プレイヤー1", points: 25000 },
+            { name: "プレイヤー2", points: 25000 },
+            { name: "プレイヤー3", points: 25000 },
+            { name: "プレイヤー4", points: 25000 },
+            { name: "プレイヤー5", points: 25000 },
+            { name: "プレイヤー6", points: 25000 }
         ];
 
-        function updateDisplay() {
-            const table = document.getElementById('ranking-table');
-            // スコア順にソート
-            players.sort((a, b) => b.score - a.score);
-
-            let html = '';
-            players.forEach((p, index) => {
-                html += `<tr>
-                    <td>${index + 1}位</td>
-                    <td>${p.name}</td>
-                    <td>${p.score.toLocaleString()} 点</td>
-                </tr>`;
-            });
-            table.innerHTML = html;
-        }
-
-        document.getElementById('score-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const winner = document.getElementById('winner').value;
-            const points = parseInt(document.getElementById('points').value) || 0;
-
-            // 簡単な加算処理（実際はここに細かいロン・ツモのやり取りロジックが入る）
-            players.forEach(p => {
-                if (p.name === winner) {
-                    p.score += points;
-                } else {
-                    p.score -= Math.floor(points / 3); // 簡易的な減点
-                }
-            });
-
-            updateDisplay();
-            alert(winner + ' の勝利を反映しました！');
-            document.getElementById('points').value = '';
-        });
-
-        function resetData() {
-            if(confirm('スコアを初期化しますか？')) {
-                players.forEach(p => p.score = 25000);
-                updateDisplay();
+        // 起動時の処理（すでに名前を保存しているか確認）
+        window.onload = function() {
+            const savedUser = localStorage.getItem('mahjong_my_name');
+            if (savedUser) {
+                applyUserSession(savedUser);
             }
+        };
+
+        function setMyUser() {
+            const selectedName = document.getElementById('select-my-name').value;
+            localStorage.setItem('mahjong_my_name', selectedName);
+            applyUserSession(selectedName);
         }
 
-        // 初回ロード時
-        updateDisplay();
-    </script>
+        function applyUserSession(name) {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('current-user-display').innerText = `ログイン中: ${name}`;
+            // アガった人の初期値を自分に合わせる
+            document.getElementById('winner').value = name;
+        }
 
+        function switchUser() {
+            localStorage.removeItem('mahjong_my_name');
+            document.getElementById('login-modal').style.display = 'flex';
+        }
+
+        function handleSubmit(event) {
+            event.preventDefault();
+            const winnerName = document.getElementById('winner').value;
+            const scoreInput = parseInt(document.getElementById('score').value);
+
+            // 簡易的なポイント変動処理（例として入力点数をそのまま加算）
+            let p = players.find(item => item.name === winnerName);
+            if(p) {
+                p.points += scoreInput;
+            }
+
+            updateRanking();
+            document.getElementById('score').value = '';
+            alert(`${winnerName} に ${scoreInput} 点を追加しました！`);
+        }
+
+        function updateRanking() {
+            // ポイント順にソート
+            let sorted = [...players].sort((a, b) => b.points - a.points);
+            let tbody = document.getElementById('ranking-body');
+            tbody.innerHTML = '';
+
+            sorted.forEach((p, index) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `<td>${index + 1}位</td><td>${p.name}</td><td>${p.points.toLocaleString()} 点</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 初期表示用
+        updateRanking();
+    </script>
 </body>
 </html>
