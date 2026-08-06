@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻雀リアルタイム・スコアボード（Gemini自動AI連携版）</title>
+    <title>麻雀リアルタイム・スコアボード（OpenAI自動連携版）</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -198,12 +198,12 @@
         </div>
     </div>
 
-    <!-- Gemini API設定モーダル -->
+    <!-- OpenAI API設定モーダル -->
     <div id="api-modal" class="modal" style="display: none;">
         <div class="modal-box">
-            <h2>🔑 Gemini APIキーの設定</h2>
-            <p style="color: var(--text-secondary); font-size: 14px;">「AQ.」から始まる新しいAPIキーをそのまま貼り付けてください。</p>
-            <input type="password" id="api-key-input" placeholder="AQ.xxx...">
+            <h2>🔑 OpenAI APIキーの設定</h2>
+            <p style="color: var(--text-secondary); font-size: 14px;">「sk-」から始まるOpenAIのAPIキーを貼り付けてください。</p>
+            <input type="password" id="api-key-input" placeholder="sk-...">
             <button onclick="saveApiKey()">保存する</button>
             <button class="secondary" onclick="closeApiModal()">閉じる</button>
         </div>
@@ -213,7 +213,7 @@
     
     <!-- 設定・ログイン情報バー -->
     <div class="settings-bar">
-        <span style="font-size: 14px; color: var(--text-secondary);">⚙️ Gemini連携ステータス: <b id="api-status-text" style="color:#ef4444;">未設定</b></span>
+        <span style="font-size: 14px; color: var(--text-secondary);">⚙️ OpenAI連携ステータス: <b id="api-status-text" style="color:#ef4444;">未設定</b></span>
         <button class="secondary" style="width: auto; padding: 6px 12px; margin: 0; font-size: 13px;" onclick="openApiModal()">APIキーを設定</button>
     </div>
 
@@ -228,16 +228,16 @@
     </div>
 
     <div class="container">
-        <!-- 点数入力・Gemini AI自動判定パネル -->
+        <!-- 点数入力・OpenAI自動判定パネル -->
         <div class="card">
-            <h2>✨ Gemini AI 一発自動点数計算</h2>
+            <h2>✨ OpenAI (GPT-4o) 一発自動点数計算</h2>
             <form id="score-form" onsubmit="handleSubmit(event)">
                 <label>① 手牌の写真を撮影 / 選択：</label>
                 <div class="instruction-note">
                     💡 <b>撮影のコツ：</b><br>
                     • <b>ポン・チー（鳴き）：</b> 手牌の<b>左側</b>に横向きで置く。<br>
                     • <b>アガリ牌：</b> 手牌の列の<b>「上（または下）」にポツンと離して1枚だけ横向き</b>に置く。<br>
-                    この状態でボタンを押すと、Geminiが画像から牌を判別して一発で点数を計算します！
+                    この状態でボタンを押すと、GPT-4oが画像から牌を判別して一発で点数を計算します！
                 </div>
                 <input type="file" accept="image/*" capture="environment" id="camera-input" onchange="previewImage(event)">
                 <img id="preview" class="camera-preview" alt="プレビュー">
@@ -255,11 +255,11 @@
                     </select>
                 </div>
 
-                <button type="button" id="ai-calc-btn" onclick="askGeminiToCalculate()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); margin-top: 10px;">🤖 Geminiに写真を送って一発自動計算！</button>
+                <button type="button" id="ai-calc-btn" onclick="askOpenAIToCalculate()" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 10px;">🤖 OpenAIに写真を送って一発自動計算！</button>
 
-                <!-- Geminiの解析結果表示エリア -->
+                <!-- 解析結果表示エリア -->
                 <div id="ai-result-display" class="ai-result-box" style="display: none;">
-                    <strong>【Gemini AI 解析結果】</strong><br>
+                    <strong>【OpenAI 解析結果】</strong><br>
                     <span id="ai-detected-text">解析中...</span>
                 </div>
 
@@ -300,7 +300,7 @@
         ];
 
         let mySlotIndex = localStorage.getItem('mahjong_my_slot');
-        let geminiApiKey = localStorage.getItem('mahjong_api_key') || '';
+        let openaiApiKey = localStorage.getItem('mahjong_openai_key') || '';
 
         window.onload = function() {
             updateApiStatus();
@@ -313,7 +313,7 @@
 
         function updateApiStatus() {
             let statusText = document.getElementById('api-status-text');
-            if (geminiApiKey) {
+            if (openaiApiKey) {
                 statusText.innerText = "設定済み (Ready)";
                 statusText.style.color = "#10b981";
             } else {
@@ -323,7 +323,7 @@
         }
 
         function openApiModal() {
-            document.getElementById('api-key-input').value = geminiApiKey;
+            document.getElementById('api-key-input').value = openaiApiKey;
             document.getElementById('api-modal').style.display = 'flex';
         }
 
@@ -334,11 +334,11 @@
         function saveApiKey() {
             let key = document.getElementById('api-key-input').value.trim();
             if (key) {
-                geminiApiKey = key;
-                localStorage.setItem('mahjong_api_key', key);
+                openaiApiKey = key;
+                localStorage.setItem('mahjong_openai_key', key);
                 updateApiStatus();
                 closeApiModal();
-                alert("APIキーを保存しました！");
+                alert("OpenAIのAPIキーを保存しました！");
             }
         }
 
@@ -415,10 +415,10 @@
             reader.readAsDataURL(event.target.files[0]);
         }
 
-        // AQ.キーに対応したBearer認証によるGemini API通信
-        async function askGeminiToCalculate() {
-            if (!geminiApiKey) {
-                alert("GeminiのAPIキーが設定されていません。上部の「APIキーを設定」ボタンからキーを入力してください。");
+        // OpenAI API (GPT-4o) による画像解析・点数計算
+        async function askOpenAIToCalculate() {
+            if (!openaiApiKey) {
+                alert("OpenAIのAPIキーが設定されていません。上部の「APIキーを設定」ボタンからキーを入力してください。");
                 openApiModal();
                 return;
             }
@@ -434,31 +434,32 @@
             let detectedText = document.getElementById('ai-detected-text');
 
             btn.disabled = true;
-            btn.innerText = "🔄 Geminiが画像を解析中...";
+            btn.innerText = "🔄 OpenAIが画像を解析中...";
             resultBox.style.display = 'block';
             detectedText.innerHTML = "画像を解析して役と点数を計算しています...";
 
             try {
                 let base64Image = await fileToBase64(fileInput.files[0]);
-                let base64Data = base64Image.split(',')[1];
-                let mimeType = fileInput.files[0].type || "image/jpeg";
 
-                // 新しいAuthキー(AQ.)を通すためのヘッダー認証方式
-                const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${geminiApiKey}`
+                        'Authorization': `Bearer ${openaiApiKey}`
                     },
                     body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                {
-                                    text: `あなたは麻雀のプロ審判です。提供された手牌の画像から成立している役を判定し、点数を計算してください。
+                        model: "gpt-4o",
+                        messages: [
+                            {
+                                role: "user",
+                                content: [
+                                    {
+                                        type: "text",
+                                        text: `あなたは麻雀のプロ審判です。提供された手牌の画像から成立している役を判定し、点数を計算してください。
 ルール補足：
 - 左側にある横向きの牌ブロックは「ポン・チー（鳴き）」です。
 - 列の上（または下）にポツンと独立して横向きに置かれている牌は「アガリ牌」です。
-以下のJSON形式のみで正確に回答してください。他の文章は一切含めないでください。
+必ず以下のJSON形式のみで正確に回答してください。マークダウンのバッククォート（\`\`\`）も付けず、プレーンなJSON文字列だけを出力してください。
 {
   "yakuNames": ["役名1", "役名2"],
   "totalHans": 翻数(数値),
@@ -466,24 +467,27 @@
   "score": 点数(数値, ロンアガリの基本得点または満貫などの支払い点数),
   "comment": "判定の解説文"
 }`
-                                },
-                                {
-                                    inline_data: {
-                                        mime_type: mimeType,
-                                        data: base64Data
+                                    },
+                                    {
+                                        type: "image_url",
+                                        image_url: {
+                                            url: base64Image
+                                        }
                                     }
-                                }
-                            ]
-                        }]
+                                ]
+                            }
+                        ],
+                        max_tokens: 500
                     })
                 });
 
                 if (!response.ok) {
-                    throw new Error(`APIエラー: ${response.status} ${response.statusText}`);
+                    let errData = await response.json();
+                    throw new Error(errData.error?.message || `APIエラー: ${response.status}`);
                 }
 
                 const data = await response.json();
-                let rawText = data.candidates[0].content.parts[0].text;
+                let rawText = data.choices[0].message.content.trim();
                 
                 rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
                 let parsedResult = JSON.parse(rawText);
@@ -497,13 +501,13 @@
 
                 document.getElementById('score').value = parsedResult.score;
                 btn.disabled = false;
-                btn.innerText = "🤖 Geminiに写真を送って一発自動計算！";
+                btn.innerText = "🤖 OpenAIに写真を送って一発自動計算！";
 
             } catch (error) {
                 console.error(error);
                 detectedText.innerHTML = `<span style="color:#ef4444;">解析に失敗しました: ${error.message}</span>`;
                 btn.disabled = false;
-                btn.innerText = "🤖 Geminiに写真を送って一発自動計算！";
+                btn.innerText = "🤖 OpenAIに写真を送って一発自動計算！";
             }
         }
 
