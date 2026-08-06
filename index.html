@@ -1,0 +1,197 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Content-Style-Type" content="text/css">
+  <title></title>
+  <meta name="Generator" content="Cocoa HTML Writer">
+  <meta name="CocoaVersion" content="2575.7">
+  <style type="text/css">
+    p.p1 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica}
+    p.p2 {margin: 0.0px 0.0px 0.0px 0.0px; font: 12.0px Helvetica; min-height: 14.0px}
+  </style>
+</head>
+<body>
+<p class="p1">&lt;!DOCTYPE html&gt;</p>
+<p class="p1">&lt;html lang="ja"&gt;</p>
+<p class="p1">&lt;head&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta charset="UTF-8"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;title&gt;麻雀リアルタイム・スコアボード&lt;/title&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;style&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>:root {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>--bg-color: #0f172a;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>--card-bg: #1e293b;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>--accent-color: #10b981;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>--text-color: #f8fafc;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>--text-secondary: #94a3b8;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>body {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background-color: var(--bg-color);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: var(--text-color);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: 0;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 20px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>h1, h2 { text-align: center; }</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.container {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>max-width: 1200px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: 0 auto;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>display: grid;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>grid-template-columns: 1fr;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>gap: 20px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>@media (min-width: 768px) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>.container { grid-template-columns: 1fr 1fr; }</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>.card {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background-color: var(--card-bg);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 12px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 20px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>box-shadow: 0 4px 6px rgba(0,0,0,0.3);</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>button {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background-color: var(--accent-color);</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: white;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border: none;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 12px 20px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-size: 16px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 8px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>cursor: pointer;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>font-weight: bold;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-top: 10px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>button:hover { opacity: 0.9; }</p>
+<p class="p1"><span class="Apple-converted-space">        </span>input, select {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 10px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin: 8px 0 16px 0;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>background: #0f172a;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border: 1px solid #475569;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>color: white;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-radius: 6px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>box-sizing: border-box;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>table {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>width: 100%;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-collapse: collapse;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>margin-top: 10px;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>th, td {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>padding: 12px;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>text-align: center;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>border-bottom: 1px solid #334155;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>th { color: var(--text-secondary); }</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/style&gt;</p>
+<p class="p1">&lt;/head&gt;</p>
+<p class="p1">&lt;body&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;h1&gt;🀄 麻雀リアルタイム・スコアボード&lt;/h1&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;div class="container"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;!-- スマホ用：点数入力パネル --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="card"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;h2&gt;📝 点数入力&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;form id="score-form"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;label&gt;アガった人:&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;select id="winner"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;option value="プレイヤー1"&gt;プレイヤー1&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;option value="プレイヤー2"&gt;プレイヤー2&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;option value="プレイヤー3"&gt;プレイヤー3&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;option value="プレイヤー4"&gt;プレイヤー4&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/select&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;label&gt;アガリ方:&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;select id="win-type"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;option value="ron"&gt;ロン&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;option value="tsumo"&gt;ツモ&lt;/option&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/select&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;label&gt;点数（翻数・符など）:&lt;/label&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;input type="number" id="points" placeholder="例: 7700 または 3900" required&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;button type="submit"&gt;スコアを確定して送信！&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/form&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;button style="background-color: #ef4444;" onclick="resetData()"&gt;リセット&lt;/button&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;!-- パソコン用：もりもりレート・順位表示パネル --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;div class="card"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;h2&gt;🏆 リアルタイム順位表&lt;/h2&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;th&gt;順位&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;th&gt;名前&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                        </span>&lt;th&gt;トータルポイント&lt;/th&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;/tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/thead&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;table id="ranking-table"&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;!-- JavaScriptで動的に書き換え --&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>&lt;/table&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>&lt;/div&gt;</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/div&gt;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;script&gt;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>// ローカルストレージを使った簡易同期（クラウド連携のベース）</p>
+<p class="p1"><span class="Apple-converted-space">        </span>let players = [</p>
+<p class="p1"><span class="Apple-converted-space">            </span>{ name: "プレイヤー1", score: 25000 },</p>
+<p class="p1"><span class="Apple-converted-space">            </span>{ name: "プレイヤー2", score: 25000 },</p>
+<p class="p1"><span class="Apple-converted-space">            </span>{ name: "プレイヤー3", score: 25000 },</p>
+<p class="p1"><span class="Apple-converted-space">            </span>{ name: "プレイヤー4", score: 25000 }</p>
+<p class="p1"><span class="Apple-converted-space">        </span>];</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>function updateDisplay() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const table = document.getElementById('ranking-table');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>// スコア順にソート</p>
+<p class="p1"><span class="Apple-converted-space">            </span>players.sort((a, b) =&gt; b.score - a.score);</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>let html = '';</p>
+<p class="p1"><span class="Apple-converted-space">            </span>players.forEach((p, index) =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>html += `&lt;tr&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;td&gt;${index + 1}位&lt;/td&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;td&gt;${p.name}&lt;/td&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>&lt;td&gt;${p.score.toLocaleString()} 点&lt;/td&gt;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>&lt;/tr&gt;`;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>});</p>
+<p class="p1"><span class="Apple-converted-space">            </span>table.innerHTML = html;</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>document.getElementById('score-form').addEventListener('submit', function(e) {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>e.preventDefault();</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const winner = document.getElementById('winner').value;</p>
+<p class="p1"><span class="Apple-converted-space">            </span>const points = parseInt(document.getElementById('points').value) || 0;</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>// 簡単な加算処理（実際はここに細かいロン・ツモのやり取りロジックが入る）</p>
+<p class="p1"><span class="Apple-converted-space">            </span>players.forEach(p =&gt; {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>if (p.name === winner) {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>p.score += points;</p>
+<p class="p1"><span class="Apple-converted-space">                </span>} else {</p>
+<p class="p1"><span class="Apple-converted-space">                    </span>p.score -= Math.floor(points / 3); // 簡易的な減点</p>
+<p class="p1"><span class="Apple-converted-space">                </span>}</p>
+<p class="p1"><span class="Apple-converted-space">            </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">            </span>updateDisplay();</p>
+<p class="p1"><span class="Apple-converted-space">            </span>alert(winner + ' の勝利を反映しました！');</p>
+<p class="p1"><span class="Apple-converted-space">            </span>document.getElementById('points').value = '';</p>
+<p class="p1"><span class="Apple-converted-space">        </span>});</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>function resetData() {</p>
+<p class="p1"><span class="Apple-converted-space">            </span>if(confirm('スコアを初期化しますか？')) {</p>
+<p class="p1"><span class="Apple-converted-space">                </span>players.forEach(p =&gt; p.score = 25000);</p>
+<p class="p1"><span class="Apple-converted-space">                </span>updateDisplay();</p>
+<p class="p1"><span class="Apple-converted-space">            </span>}</p>
+<p class="p1"><span class="Apple-converted-space">        </span>}</p>
+<p class="p2"><br></p>
+<p class="p1"><span class="Apple-converted-space">        </span>// 初回ロード時</p>
+<p class="p1"><span class="Apple-converted-space">        </span>updateDisplay();</p>
+<p class="p1"><span class="Apple-converted-space">    </span>&lt;/script&gt;</p>
+<p class="p2"><br></p>
+<p class="p1">&lt;/body&gt;</p>
+<p class="p1">&lt;/html&gt;</p>
+</body>
+</html>
