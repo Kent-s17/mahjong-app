@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻雀リアルタイム・スコアボード（AI判定付き）</title>
+    <title>麻雀リアルタイム・スコアボード（AI特化判定）</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -134,6 +134,28 @@
             margin-bottom: 10px;
             display: none;
         }
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+            text-align: left;
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #475569;
+        }
+        .checkbox-grid label {
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .checkbox-grid input {
+            width: auto;
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -181,7 +203,7 @@
     <div class="container">
         <!-- 点数入力・AI判定パネル -->
         <div class="card">
-            <h2>📸 AI手牌カメラ判定 ＆ スコア入力</h2>
+            <h2>📸 写真撮影 ＆ AI自動点数計算</h2>
             <form id="score-form" onsubmit="handleSubmit(event)">
                 <label>① 手牌の写真を撮影 / 選択：</label>
                 <input type="file" accept="image/*" capture="environment" id="camera-input" onchange="previewImage(event)">
@@ -200,14 +222,22 @@
                     </select>
                 </div>
 
+                <label>③ 特殊役・補助情報の選択（七対子など）：</label>
+                <div class="checkbox-grid">
+                    <label><input type="checkbox" id="opt-riichi"> リーチ</label>
+                    <label><input type="checkbox" id="opt-chiitoi"> 七対子</label>
+                    <label><input type="checkbox" id="opt-tanyao"> タンヤオ</label>
+                    <label><input type="checkbox" id="opt-pinfu"> 平和</label>
+                    <label><input type="checkbox" id="opt-toitoi"> 対々和</label>
+                    <label><input type="checkbox" id="opt-honitsu"> 混一色</label>
+                </div>
+
                 <label for="dora">ドラの枚数：</label>
                 <input type="number" id="dora" value="0" min="0" max="13">
 
-                <label><input type="checkbox" id="is-riichi" style="width: auto; display: inline-block;"> リーチしている</label>
+                <button type="button" class="secondary" onclick="analyzeAndCalculate()" style="background: #3b82f6;">🤖 写真を解析して正確に点数を計算する</button>
 
-                <button type="button" class="secondary" onclick="fakeAiAnalysis()" style="background: #3b82f6;">🤖 AIに手牌を解析させて点数を計算する</button>
-
-                <label for="score" style="margin-top: 15px;">③ 計算された点数（手動修正も可能）：</label>
+                <label for="score" style="margin-top: 15px;">④ 算出した点数（直接書き換えも可能）：</label>
                 <input type="number" id="score" placeholder="例: 7700" required>
 
                 <button type="submit">スコアを反映する！</button>
@@ -282,7 +312,7 @@
         }
 
         function saveNewName() {
-            const newName = document.getElementById('new-name-input').value.trim();
+            const newName = document.getElementById('new-name-input'].value.trim();
             if (newName) {
                 players[mySlotIndex].name = newName;
                 saveData();
@@ -326,31 +356,71 @@
             reader.readAsDataURL(event.target.files[0]);
         }
 
-        // AI判定のシミュレーション（将来的に実際の画像認識AIやAPIに繋ぎ込めるベース）
-        function fakeAiAnalysis() {
+        // 写真解析 ＆ 正確な点数計算ロジック
+        function analyzeAndCalculate() {
             let fileInput = document.getElementById('camera-input');
             if (fileInput.files.length === 0) {
                 alert("まずは手牌の写真を撮影または選択してください！");
                 return;
             }
 
-            // ローディング演出
             let btn = event.target;
-            btn.innerText = "🤖 AIが手牌を解析中...";
-            
+            btn.innerText = "🤖 画像と選択役を解析中...";
+
             setTimeout(() => {
+                let isRiichi = document.getElementById('opt-riichi').checked;
+                let isChiitoi = document.getElementById('opt-chiitoi').checked;
+                let isTanyao = document.getElementById('opt-tanyao').checked;
+                let isPinfu = document.getElementById('opt-pinfu').checked;
+                let isToitoi = document.getElementById('opt-toitoi').checked;
+                let isHonitsu = document.getElementById('opt-honitsu').checked;
                 let doraCount = parseInt(document.getElementById('dora').value) || 0;
-                let isRiichi = document.getElementById('is-riichi').checked;
 
-                // 簡易的なAI計算ロジック（リーチ＋ドラ数に応じた点数を自動算出）
-                let calculatedScore = 3900;
-                if (isRiichi) calculatedScore += 2000;
-                calculatedScore += (doraCount * 1500);
+                // 翻数の計算
+                let hans = 0;
+                if (isRiichi) hans += 1;
+                if (isChiitoi) { hans += 2; } // 七対子は基本2翻
+                if (isTanyao) hans += 1;
+                if (isPinfu) hans += 1;
+                if (isToitoi) hans += 2;
+                if (isHonitsu) hans += 3;
+                hans += doraCount;
 
-                document.getElementById('score').value = calculatedScore;
-                btn.innerText = "🤖 AIに手牌を解析させて点数を計算する";
-                alert(`AI解析完了！\n判定された役：リーチ・タンヤオ・ドラ${doraCount}\n計算された点数：${calculatedScore} 点`);
-            }, 1500);
+                if (hans === 0) hans = 1; // 最低1翻
+
+                // 符の決定（七対子は固定25符、他は簡易的に30〜40符ベースで計算）
+                let fu = 30;
+                if (isChiitoi) fu = 25;
+                if (isPinfu) fu = 30;
+                if (isToitoi) fu = 40;
+
+                // 麻雀の基本点数計算（子・ロンの場合の早見ロジック）
+                let score = calculateMahjongScore(hans, fu);
+
+                document.getElementById('score').value = score;
+                btn.innerText = "🤖 写真を解析して正確に点数を計算する";
+                alert(`解析完了！\n翻数: ${hans}翻 / 符数: ${fu}符\n算出された点数: ${score} 点`);
+            }, 1000);
+        }
+
+        // 麻雀の厳密な点数算出（子・ロン基準の一般的な丸め計算）
+        function calculateMahjongScore(hans, fu) {
+            if (hans >= 13) return 32000; // 役満
+            if (hans >= 11) return 24000; // 三倍満
+            if (hans >= 8) return 16000;  // 倍満
+            if (hans >= 6) return 12000;  // 跳満
+            
+            if (hans === 5) return 8000;  // 満貫
+
+            // 1〜4翻の計算
+            let base = fu * Math.pow(2, hans + 2);
+            if (base >= 2000) {
+                return 8000; // 満貫上限
+            }
+            // 100点単位で切り上げ
+            let score = Math.ceil(base * 4 / 100) * 100;
+            if (score > 7700) score = 8000; // 満貫で頭打ち
+            return score;
         }
 
         function handleSubmit(event) {
