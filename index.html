@@ -300,8 +300,7 @@
         ];
 
         let mySlotIndex = localStorage.getItem('mahjong_my_slot');
-        let geminiApiKey = localStorage.getItem('mahjong_api_key') || '';
-
+        let geminiApiKey = "AQ.Ab8RN6JX3LZUKoHlBIBotX6muVX_x6HbFta9yV6myUw2YWsKRw" // ←ここに新しいキーを直接入れる
         window.onload = function() {
             updateApiStatus();
             if (mySlotIndex !== null && players[mySlotIndex]) {
