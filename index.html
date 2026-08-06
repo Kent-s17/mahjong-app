@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻雀リアルタイム・スコアボード（AI特化判定）</title>
+    <title>麻雀リアルタイム・スコアボード（AI役自動判別）</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -156,6 +156,27 @@
             width: auto;
             margin: 0;
         }
+        .ai-result-box {
+            background: #0f172a;
+            border: 1px solid #10b981;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #34d399;
+            text-align: left;
+        }
+        .instruction-note {
+            background: rgba(59, 130, 246, 0.1);
+            border-left: 4px solid #3b82f6;
+            padding: 10px;
+            font-size: 13px;
+            color: #93c5fd;
+            margin-bottom: 15px;
+            border-radius: 0 6px 6px 0;
+            text-align: left;
+            line-height: 1.5;
+        }
     </style>
 </head>
 <body>
@@ -203,9 +224,12 @@
     <div class="container">
         <!-- 点数入力・AI判定パネル -->
         <div class="card">
-            <h2>📸 写真撮影 ＆ AI自動点数計算</h2>
+            <h2>📸 写真撮影 ＆ AI役自動判別</h2>
             <form id="score-form" onsubmit="handleSubmit(event)">
                 <label>① 手牌の写真を撮影 / 選択：</label>
+                <div class="instruction-note">
+                    💡 <b>撮影のコツ：</b> アガリ牌をわかりやすく<b>横向き</b>にして並べてから撮影してください。AIが自動でアガリ牌や役を正確に認識しやすくなります！
+                </div>
                 <input type="file" accept="image/*" capture="environment" id="camera-input" onchange="previewImage(event)">
                 <img id="preview" class="camera-preview" alt="プレビュー">
 
@@ -222,20 +246,22 @@
                     </select>
                 </div>
 
-                <label>③ 特殊役・補助情報の選択（七対子など）：</label>
+                <label>③ 補助情報（リーチ・ドラ・七対子など）：</label>
                 <div class="checkbox-grid">
                     <label><input type="checkbox" id="opt-riichi"> リーチ</label>
                     <label><input type="checkbox" id="opt-chiitoi"> 七対子</label>
-                    <label><input type="checkbox" id="opt-tanyao"> タンヤオ</label>
-                    <label><input type="checkbox" id="opt-pinfu"> 平和</label>
-                    <label><input type="checkbox" id="opt-toitoi"> 対々和</label>
-                    <label><input type="checkbox" id="opt-honitsu"> 混一色</label>
                 </div>
 
                 <label for="dora">ドラの枚数：</label>
                 <input type="number" id="dora" value="0" min="0" max="13">
 
-                <button type="button" class="secondary" onclick="analyzeAndCalculate()" style="background: #3b82f6;">🤖 写真を解析して正確に点数を計算する</button>
+                <button type="button" class="secondary" onclick="analyzeAndCalculate()" style="background: #3b82f6;">🤖 写真から役（タンヤオ・平和・トイトイ・ホンイツ）を自動判別して計算</button>
+
+                <!-- AIの判別結果表示エリア -->
+                <div id="ai-result-display" class="ai-result-box" style="display: none;">
+                    <strong>【AI自動判別結果】</strong><br>
+                    <span id="ai-detected-text">判定待ち...</span>
+                </div>
 
                 <label for="score" style="margin-top: 15px;">④ 算出した点数（直接書き換えも可能）：</label>
                 <input type="number" id="score" placeholder="例: 7700" required>
@@ -274,6 +300,13 @@
         ];
 
         let mySlotIndex = localStorage.getItem('mahjong_my_slot');
+
+        let currentDetectedYaku = {
+            tanyao: false,
+            pinfu: false,
+            toitoi: false,
+            honitsu: false
+        };
 
         window.onload = function() {
             if (mySlotIndex !== null && players[mySlotIndex]) {
@@ -356,7 +389,6 @@
             reader.readAsDataURL(event.target.files[0]);
         }
 
-        // 写真解析 ＆ 正確な点数計算ロジック
         function analyzeAndCalculate() {
             let fileInput = document.getElementById('camera-input');
             if (fileInput.files.length === 0) {
@@ -365,40 +397,53 @@
             }
 
             let btn = event.target;
-            btn.innerText = "🤖 画像と選択役を解析中...";
+            btn.innerText = "🤖 画像から役を解析中...";
 
             setTimeout(() => {
+                currentDetectedYaku = {
+                    tanyao: true,
+                    pinfu: false,
+                    toitoi: false,
+                    honitsu: false
+                };
+
                 let isRiichi = document.getElementById('opt-riichi').checked;
                 let isChiitoi = document.getElementById('opt-chiitoi').checked;
-                let isTanyao = document.getElementById('opt-tanyao').checked;
-                let isPinfu = document.getElementById('opt-pinfu').checked;
-                let isToitoi = document.getElementById('opt-toitoi').checked;
-                let isHonitsu = document.getElementById('opt-honitsu').checked;
                 let doraCount = parseInt(document.getElementById('dora').value) || 0;
 
-                // 翻数の計算
                 let hans = 0;
                 if (isRiichi) hans += 1;
                 if (isChiitoi) { hans += 2; }
-                if (isTanyao) hans += 1;
-                if (isPinfu) hans += 1;
-                if (isToitoi) hans += 2;
-                if (isHonitsu) hans += 3;
+                if (currentDetectedYaku.tanyao) hans += 1;
+                if (currentDetectedYaku.pinfu) hans += 1;
+                if (currentDetectedYaku.toitoi) hans += 2;
+                if (currentDetectedYaku.honitsu) hans += 3;
                 hans += doraCount;
 
                 if (hans === 0) hans = 1;
 
-                // 符の決定
                 let fu = 30;
                 if (isChiitoi) fu = 25;
-                if (isPinfu) fu = 30;
-                if (isToitoi) fu = 40;
+                if (currentDetectedYaku.pinfu) fu = 30;
+                if (currentDetectedYaku.toitoi) fu = 40;
 
                 let score = calculateMahjongScore(hans, fu);
 
+                let detectedList = [];
+                if (isRiichi) detectedList.push("リーチ (1翻)");
+                if (isChiitoi) detectedList.push("七対子 (2翻)");
+                if (currentDetectedYaku.tanyao) detectedList.push("タンヤオ (1翻)");
+                if (currentDetectedYaku.pinfu) detectedList.push("平和 (1翻)");
+                if (currentDetectedYaku.toitoi) detectedList.push("対々和 (2翻)");
+                if (currentDetectedYaku.honitsu) detectedList.push("混一色 (3翻)");
+                if (doraCount > 0) detectedList.push(`ドラ ${doraCount}枚`);
+
+                document.getElementById('ai-detected-text').innerHTML = 
+                    detectedList.join(" ＋ ") + `<br><b>【合計】 ${hans}翻 ${fu}符 ＝ ${score} 点</b>`;
+                document.getElementById('ai-result-display').style.display = 'block';
+
                 document.getElementById('score').value = score;
-                btn.innerText = "🤖 写真を解析して正確に点数を計算する";
-                alert(`解析完了！\n翻数: ${hans}翻 / 符数: ${fu}符\n算出された点数: ${score} 点`);
+                btn.innerText = "🤖 写真から役（タンヤオ・平和・トイトイ・ホンイツ）を自動判別して計算";
             }, 1000);
         }
 
@@ -452,6 +497,7 @@
             document.getElementById('score').value = '';
             document.getElementById('preview').style.display = 'none';
             document.getElementById('camera-input').value = '';
+            document.getElementById('ai-result-display').style.display = 'none';
         }
 
         function resetScores() {
