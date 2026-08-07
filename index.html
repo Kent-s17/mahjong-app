@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻雀リアルタイム・スコアボード</title>
+    <title>麻雀リアルタイム・スコアボード (6人レート・4人打ち対応)</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -170,16 +170,18 @@
 </head>
 <body>
 
-    <!-- 初回ログイン・4人分の選択画面 -->
+    <!-- 初回ログイン・6人分の選択画面 -->
     <div id="login-modal" class="modal">
         <div class="modal-box">
-            <h2>🀄 プレイヤー選択 (4人打ち)</h2>
+            <h2>🀄 プレイヤー選択 (6人レート)</h2>
             <p style="color: var(--text-secondary); font-size: 14px;">自分の番号を選んで参加してください。<br>あとから好きな名前に変更できます。</p>
             <select id="select-slot">
                 <option value="0">プレイヤー1</option>
                 <option value="1">プレイヤー2</option>
                 <option value="2">プレイヤー3</option>
                 <option value="3">プレイヤー4</option>
+                <option value="4">プレイヤー5</option>
+                <option value="5">プレイヤー6</option>
             </select>
             <button onclick="setMySlot()">この枠で参加する</button>
         </div>
@@ -228,8 +230,8 @@
     <div class="container">
         <!-- 点数入力・Gemini AI自動判定パネル -->
         <div class="card">
-            <h2>✨ Gemini 自動点数計算</h2>
-            <form id="score-form" onsubmit="handleSubmit(event)">
+            <h2>✨ Gemini 自動点数計算 ＆ 記録</h2>
+            <form id="score-form" onclick="event.stopPropagation()">
                 <label>① 手牌の写真を撮影 / 選択：</label>
                 <div class="instruction-note">
                     💡 <b>撮影のコツ：</b><br>
@@ -241,15 +243,25 @@
 
                 <label>② アガり方：</label>
                 <div class="radio-group">
-                    <label><input type="radio" name="method" value="ron" checked onchange="toggleMethodField()"> ロン</label>
-                    <label><input type="radio" name="method" value="tsumo" onchange="toggleMethodField()"> ツモ</label>
+                    <label><input type="radio" name="method" value="ron" checked onchange="toggleMethodFields()"> ロン</label>
+                    <label><input type="radio" name="method" value="tsumo" onchange="toggleMethodFields()"> ツモ</label>
                 </div>
 
-                <div id="target-container">
-                    <label id="target-label" for="target-player">放銃者（振り込んだ人）：</label>
-                    <select id="target-player">
-                        <!-- 動的に生成 -->
-                    </select>
+                <!-- ロン用：放銃者選択 -->
+                <div id="ron-container">
+                    <label for="loser-select">放銃者（振り込んだ人）：</label>
+                    <select id="loser-select"></select>
+                </div>
+
+                <!-- ツモ用：親・対戦相手選択 -->
+                <div id="tsumo-container" style="display: none;">
+                    <label for="dealer-select">👑 親は誰？：</label>
+                    <select id="dealer-select"></select>
+
+                    <label>👥 ツモられた相手（3人）：</label>
+                    <select id="victim1" style="margin-bottom: 5px;"></select>
+                    <select id="victim2" style="margin-bottom: 5px;"></select>
+                    <select id="victim3" style="margin-bottom: 15px;"></select>
                 </div>
 
                 <button type="button" id="ai-calc-btn" onclick="askGeminiToCalculate()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); margin-top: 10px;">🤖 Gemini 3.5 で一発自動計算！</button>
@@ -263,14 +275,14 @@
                 <label for="score" style="margin-top: 15px;">③ 算出した点数（直接書き換えも可能）：</label>
                 <input type="number" id="score" placeholder="例: 7700" required>
 
-                <button type="submit">スコアを反映する！</button>
+                <button type="button" onclick="handleSubmit()">スコアを反映する！</button>
             </form>
-            <button class="secondary" onclick="resetScores()">リセット</button>
+            <button class="secondary" onclick="resetScores()" style="margin-top: 15px;">全プレイヤーのポイントをリセット</button>
         </div>
 
-        <!-- リアルタイム順位表 -->
+        <!-- リアルタイム順位表 (6人レート) -->
         <div class="card">
-            <h2>🏆 リアルタイム順位表 (4人)</h2>
+            <h2>🏆 6人全体ランキング</h2>
             <table>
                 <thead>
                     <tr>
@@ -287,15 +299,17 @@
     </div>
 
     <script>
-        // 4人打ち用にデフォルトを4人に変更
-        let players = JSON.parse(localStorage.getItem('mahjong_players_4p')) || [
+        // 6人全体のレートデータを保持
+        let players = JSON.parse(localStorage.getItem('mahjong_6p_all')) || [
             { name: "プレイヤー1", points: 25000 },
             { name: "プレイヤー2", points: 25000 },
             { name: "プレイヤー3", points: 25000 },
-            { name: "プレイヤー4", points: 25000 }
+            { name: "プレイヤー4", points: 25000 },
+            { name: "プレイヤー5", points: 25000 },
+            { name: "プレイヤー6", points: 25000 }
         ];
 
-        let mySlotIndex = localStorage.getItem('mahjong_my_slot_4p');
+        let mySlotIndex = localStorage.getItem('mahjong_my_slot_6p');
         let geminiApiKey = localStorage.getItem('mahjong_api_key') || '';
 
         window.onload = function() {
@@ -340,7 +354,7 @@
 
         function setMySlot() {
             const slot = document.getElementById('select-slot').value;
-            localStorage.setItem('mahjong_my_slot_4p', slot);
+            localStorage.setItem('mahjong_my_slot_6p', slot);
             applyUserSession(parseInt(slot));
         }
 
@@ -348,12 +362,12 @@
             mySlotIndex = index;
             document.getElementById('login-modal').style.display = 'none';
             document.getElementById('current-user-display').innerText = players[index].name;
-            updateTargetOptions();
+            updateFormOptions();
             updateRanking();
         }
 
         function switchUser() {
-            localStorage.removeItem('mahjong_my_slot_4p');
+            localStorage.removeItem('mahjong_my_slot_6p');
             document.getElementById('login-modal').style.display = 'flex';
         }
 
@@ -372,39 +386,66 @@
                 players[mySlotIndex].name = newName;
                 saveData();
                 document.getElementById('current-user-display').innerText = newName;
-                updateTargetOptions();
+                updateFormOptions();
                 updateRanking();
                 closeRenameModal();
             }
         }
 
-        function updateTargetOptions() {
+        function updateFormOptions() {
             let method = document.querySelector('input[name="method"]:checked').value;
-            let targetSelect = document.getElementById('target-player');
-            let targetLabel = document.getElementById('target-label');
-            targetSelect.innerHTML = '';
+            
+            // ロン用の選択肢（自分以外）
+            let loserSelect = document.getElementById('loser-select');
+            loserSelect.innerHTML = '';
+            players.forEach((p, index) => {
+                if (index !== parseInt(mySlotIndex)) {
+                    let opt = document.createElement('option');
+                    opt.value = index;
+                    opt.text = p.name;
+                    loserSelect.appendChild(opt);
+                }
+            });
 
-            if (method === 'ron') {
-                targetLabel.innerText = "放銃者（振り込んだ人）：";
-                players.forEach((p, index) => {
-                    if (index !== parseInt(mySlotIndex)) {
-                        let opt = document.createElement('option');
-                        opt.value = index;
-                        opt.text = p.name;
-                        targetSelect.appendChild(opt);
-                    }
-                });
-            } else {
-                targetLabel.innerText = "ツモられ方：";
-                let opt = document.createElement('option');
-                opt.value = "all";
-                opt.text = "残りの3人全員から均等に徴収（通常のツモ）";
-                targetSelect.appendChild(opt);
+            // ツモ用の選択肢（全員から選べる）
+            let dealerSelect = document.getElementById('dealer-select');
+            let v1 = document.getElementById('victim1');
+            let v2 = document.getElementById('victim2');
+            let v3 = document.getElementById('victim3');
+
+            dealerSelect.innerHTML = '';
+            v1.innerHTML = '';
+            v2.innerHTML = '';
+            v3.innerHTML = '';
+
+            players.forEach((p, index) => {
+                dealerSelect.innerHTML += `<option value="${index}">${p.name}</option>`;
+                if (index !== parseInt(mySlotIndex)) {
+                    v1.innerHTML += `<option value="${index}">${p.name}</option>`;
+                    v2.innerHTML += `<option value="${index}">${p.name}</option>`;
+                    v3.innerHTML += `<option value="${index}">${p.name}</option>`;
+                }
+            });
+
+            // デフォルトで3人の選択被りが起きないように初期インデックスをずらす
+            let availableIndices = players.map((_, i) => i).filter(i => i !== parseInt(mySlotIndex));
+            if (availableIndices.length >= 3) {
+                v1.selectedIndex = 0;
+                v2.selectedIndex = 1 % availableIndices.length;
+                v3.selectedIndex = 2 % availableIndices.length;
             }
         }
 
-        function toggleMethodField() {
-            updateTargetOptions();
+        function toggleMethodFields() {
+            let method = document.querySelector('input[name="method"]:checked').value;
+            if (method === 'ron') {
+                document.getElementById('ron-container').style.display = 'block';
+                document.getElementById('tsumo-container').style.display = 'none';
+            } else {
+                document.getElementById('ron-container').style.display = 'none';
+                document.getElementById('tsumo-container').style.display = 'block';
+            }
+            updateFormOptions();
         }
 
         function previewImage(event) {
@@ -482,7 +523,7 @@
                         contents: [{
                             parts: [
                                 {
-                                    text: `あなたは麻雀のプロ審判です。手牌画像から役、翻数、符数、満貫・倍満・役満などの階級、およびロンアガリの獲得点数（または支払い基本点数）を計算してください。
+                                    text: `あなたは麻雀のプロ審判です。手牌画像から役、翻数、符数、満貫・倍満・役満などの階級、および獲得点数（または支払い基本点数）を計算してください。
 余計な文章やマークダウン（\`\`\`など）を一切含めず、必ず以下の純粋なJSON文字列だけを返してください。
 {
   "yakuNames": ["役名1", "役名2"],
@@ -517,7 +558,7 @@
                 detectedText.innerHTML = `
                     <b>成立役:</b> ${parsedResult.yakuNames.join(', ')}<br>
                     <b>翻・符:</b> ${parsedResult.hans}翻 / ${parsedResult.fu}符 （<b>${parsedResult.level}</b>）<br>
-                    <b>プラス点数:</b> <span style="font-size:16px; color:#fff;"><b>+${parsedResult.score.toLocaleString()} 点</b></span>
+                    <b>点数:</b> <span style="font-size:16px; color:#fff;"><b>+${parsedResult.score.toLocaleString()} 点</b></span>
                 `;
 
                 document.getElementById('score').value = parsedResult.score;
@@ -532,8 +573,7 @@
             }
         }
 
-        function handleSubmit(event) {
-            event.preventDefault();
+        function handleSubmit() {
             let method = document.querySelector('input[name="method"]:checked').value;
             let scoreInput = parseInt(document.getElementById('score').value);
 
@@ -543,25 +583,49 @@
             }
 
             if (method === 'ron') {
-                let loserIndex = parseInt(document.getElementById('target-player').value);
+                let loserIndex = parseInt(document.getElementById('loser-select').value);
                 players[mySlotIndex].points += scoreInput;
                 players[loserIndex].points -= scoreInput;
                 alert(`${players[loserIndex].name} から ${scoreInput.toLocaleString()} 点を奪取しました！`);
             } else {
-                // ツモの場合：残りの3人から点数を按分して徴収する
-                // 例: 子の満貫(8000点)なら、親が4000点、子が2000点ずつ支払う（合計8000点）
-                // 簡易的に「入力された点数を3人で等分（切り上げ）」して全員から引く形にします
-                let splitScore = Math.ceil(scoreInput / 3 / 100) * 100;
+                let dealerIndex = parseInt(document.getElementById('dealer-select').value);
+                let victims = [
+                    parseInt(document.getElementById('victim1').value),
+                    parseInt(document.getElementById('victim2').value),
+                    parseInt(document.getElementById('victim3').value)
+                ];
+
+                // 重複チェック
+                if (new Set(victims).size !== 3) {
+                    alert("ツモられた相手3人には、それぞれ異なるプレイヤーを選択してください。");
+                    return;
+                }
+
+                let isAmI_Dealer = (parseInt(mySlotIndex) === dealerIndex);
                 let totalCollected = 0;
 
-                players.forEach((p, index) => {
-                    if (index !== parseInt(mySlotIndex)) {
-                        p.points -= splitScore;
-                        totalCollected += splitScore;
+                victims.forEach(vIdx => {
+                    let isVictim_Dealer = (vIdx === dealerIndex);
+                    let payment = 0;
+
+                    if (isAmI_Dealer) {
+                        // 親のツモアガリ：全員が子なので一律で等分支払い（切り上げ100点単位）
+                        payment = Math.ceil((scoreInput / 3) / 100) * 100;
+                    } else {
+                        // 子のツモアガリ：親なら約半分、子なら約4分の1を支払う
+                        if (isVictim_Dealer) {
+                            payment = Math.ceil((scoreInput * 0.5) / 100) * 100;
+                        } else {
+                            payment = Math.ceil((scoreInput * 0.25) / 100) * 100;
+                        }
                     }
+
+                    players[vIdx].points -= payment;
+                    totalCollected += payment;
                 });
+
                 players[mySlotIndex].points += totalCollected;
-                alert(`ツモ！残りの3人から合計 ${totalCollected.toLocaleString()} 点を獲得しました！`);
+                alert(`ツモ！指定した3人から合計 ${totalCollected.toLocaleString()} 点を獲得しました！`);
             }
 
             saveData();
@@ -573,7 +637,7 @@
         }
 
         function resetScores() {
-            if (confirm("本当にポイントを初期状態（25,000点）にリセットしますか？")) {
+            if (confirm("本当に6人全員のポイントを初期状態（25,000点）にリセットしますか？")) {
                 players.forEach(p => p.points = 25000);
                 saveData();
                 updateRanking();
@@ -582,7 +646,7 @@
         }
 
         function saveData() {
-            localStorage.setItem('mahjong_players_4p', JSON.stringify(players));
+            localStorage.setItem('mahjong_6p_all', JSON.stringify(players));
         }
 
         function updateRanking() {
