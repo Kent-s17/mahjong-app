@@ -170,18 +170,16 @@
 </head>
 <body>
 
-    <!-- 初回ログイン・選択画面 -->
+    <!-- 初回ログイン・4人分の選択画面 -->
     <div id="login-modal" class="modal">
         <div class="modal-box">
-            <h2>🀄 プレイヤー選択</h2>
+            <h2>🀄 プレイヤー選択 (4人打ち)</h2>
             <p style="color: var(--text-secondary); font-size: 14px;">自分の番号を選んで参加してください。<br>あとから好きな名前に変更できます。</p>
             <select id="select-slot">
                 <option value="0">プレイヤー1</option>
                 <option value="1">プレイヤー2</option>
                 <option value="2">プレイヤー3</option>
                 <option value="3">プレイヤー4</option>
-                <option value="4">プレイヤー5</option>
-                <option value="5">プレイヤー6</option>
             </select>
             <button onclick="setMySlot()">この枠で参加する</button>
         </div>
@@ -243,13 +241,13 @@
 
                 <label>② アガり方：</label>
                 <div class="radio-group">
-                    <label><input type="radio" name="method" value="ron" checked onchange="toggleLoserField()"> ロン</label>
-                    <label><input type="radio" name="method" value="tsumo" onchange="toggleLoserField()"> ツモ</label>
+                    <label><input type="radio" name="method" value="ron" checked onchange="toggleMethodField()"> ロン</label>
+                    <label><input type="radio" name="method" value="tsumo" onchange="toggleMethodField()"> ツモ</label>
                 </div>
 
-                <div id="loser-container">
-                    <label for="loser">放銃者（振り込んだ人）：</label>
-                    <select id="loser">
+                <div id="target-container">
+                    <label id="target-label" for="target-player">放銃者（振り込んだ人）：</label>
+                    <select id="target-player">
                         <!-- 動的に生成 -->
                     </select>
                 </div>
@@ -272,7 +270,7 @@
 
         <!-- リアルタイム順位表 -->
         <div class="card">
-            <h2>🏆 リアルタイム順位表</h2>
+            <h2>🏆 リアルタイム順位表 (4人)</h2>
             <table>
                 <thead>
                     <tr>
@@ -289,16 +287,15 @@
     </div>
 
     <script>
-        let players = JSON.parse(localStorage.getItem('mahjong_players')) || [
+        // 4人打ち用にデフォルトを4人に変更
+        let players = JSON.parse(localStorage.getItem('mahjong_players_4p')) || [
             { name: "プレイヤー1", points: 25000 },
             { name: "プレイヤー2", points: 25000 },
             { name: "プレイヤー3", points: 25000 },
-            { name: "プレイヤー4", points: 25000 },
-            { name: "プレイヤー5", points: 25000 },
-            { name: "プレイヤー6", points: 25000 }
+            { name: "プレイヤー4", points: 25000 }
         ];
 
-        let mySlotIndex = localStorage.getItem('mahjong_my_slot');
+        let mySlotIndex = localStorage.getItem('mahjong_my_slot_4p');
         let geminiApiKey = localStorage.getItem('mahjong_api_key') || '';
 
         window.onload = function() {
@@ -343,7 +340,7 @@
 
         function setMySlot() {
             const slot = document.getElementById('select-slot').value;
-            localStorage.setItem('mahjong_my_slot', slot);
+            localStorage.setItem('mahjong_my_slot_4p', slot);
             applyUserSession(parseInt(slot));
         }
 
@@ -351,12 +348,12 @@
             mySlotIndex = index;
             document.getElementById('login-modal').style.display = 'none';
             document.getElementById('current-user-display').innerText = players[index].name;
-            updateLoserOptions();
+            updateTargetOptions();
             updateRanking();
         }
 
         function switchUser() {
-            localStorage.removeItem('mahjong_my_slot');
+            localStorage.removeItem('mahjong_my_slot_4p');
             document.getElementById('login-modal').style.display = 'flex';
         }
 
@@ -375,33 +372,39 @@
                 players[mySlotIndex].name = newName;
                 saveData();
                 document.getElementById('current-user-display').innerText = newName;
-                updateLoserOptions();
+                updateTargetOptions();
                 updateRanking();
                 closeRenameModal();
             }
         }
 
-        function updateLoserOptions() {
-            let loserSelect = document.getElementById('loser');
-            loserSelect.innerHTML = '';
-            players.forEach((p, index) => {
-                if (index !== parseInt(mySlotIndex)) {
-                    let opt = document.createElement('option');
-                    opt.value = index;
-                    opt.text = p.name;
-                    loserSelect.appendChild(opt);
-                }
-            });
+        function updateTargetOptions() {
+            let method = document.querySelector('input[name="method"]:checked').value;
+            let targetSelect = document.getElementById('target-player');
+            let targetLabel = document.getElementById('target-label');
+            targetSelect.innerHTML = '';
+
+            if (method === 'ron') {
+                targetLabel.innerText = "放銃者（振り込んだ人）：";
+                players.forEach((p, index) => {
+                    if (index !== parseInt(mySlotIndex)) {
+                        let opt = document.createElement('option');
+                        opt.value = index;
+                        opt.text = p.name;
+                        targetSelect.appendChild(opt);
+                    }
+                });
+            } else {
+                targetLabel.innerText = "ツモられ方：";
+                let opt = document.createElement('option');
+                opt.value = "all";
+                opt.text = "残りの3人全員から均等に徴収（通常のツモ）";
+                targetSelect.appendChild(opt);
+            }
         }
 
-        function toggleLoserField() {
-            let method = document.querySelector('input[name="method"]:checked').value;
-            let loserContainer = document.getElementById('loser-container');
-            if (method === 'ron') {
-                loserContainer.style.display = 'block';
-            } else {
-                loserContainer.style.display = 'none';
-            }
+        function toggleMethodField() {
+            updateTargetOptions();
         }
 
         function previewImage(event) {
@@ -540,12 +543,15 @@
             }
 
             if (method === 'ron') {
-                let loserIndex = parseInt(document.getElementById('loser').value);
+                let loserIndex = parseInt(document.getElementById('target-player').value);
                 players[mySlotIndex].points += scoreInput;
                 players[loserIndex].points -= scoreInput;
                 alert(`${players[loserIndex].name} から ${scoreInput.toLocaleString()} 点を奪取しました！`);
             } else {
-                let splitScore = Math.ceil(scoreInput / 5 / 100) * 100;
+                // ツモの場合：残りの3人から点数を按分して徴収する
+                // 例: 子の満貫(8000点)なら、親が4000点、子が2000点ずつ支払う（合計8000点）
+                // 簡易的に「入力された点数を3人で等分（切り上げ）」して全員から引く形にします
+                let splitScore = Math.ceil(scoreInput / 3 / 100) * 100;
                 let totalCollected = 0;
 
                 players.forEach((p, index) => {
@@ -555,7 +561,7 @@
                     }
                 });
                 players[mySlotIndex].points += totalCollected;
-                alert(`ツモ！全員から合計 ${totalCollected.toLocaleString()} 点を獲得しました！`);
+                alert(`ツモ！残りの3人から合計 ${totalCollected.toLocaleString()} 点を獲得しました！`);
             }
 
             saveData();
@@ -576,7 +582,7 @@
         }
 
         function saveData() {
-            localStorage.setItem('mahjong_players', JSON.stringify(players));
+            localStorage.setItem('mahjong_players_4p', JSON.stringify(players));
         }
 
         function updateRanking() {
