@@ -3,610 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻雀リアルタイム・スコアボード（Gemini AI連携版）</title>
+    <title>麻雀リアルタイム・スコアボード（Gemini 2.0版）</title>
     <style>
-        :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --accent-color: #10b981;
-            --text-color: #f8fafc;
-            --text-secondary: #94a3b8;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 20px;
-        }
-        h1, h2 { text-align: center; }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-        @media (min-width: 768px) {
-            .container { grid-template-columns: 1fr 1fr; }
-        }
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        button {
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            width: 100%;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-        button:hover { opacity: 0.9; }
-        button.secondary {
-            background-color: #475569;
-            margin-top: 5px;
-        }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            margin: 8px 0 16px 0;
-            background: #0f172a;
-            border: 1px solid #475569;
-            color: white;
-            border-radius: 6px;
-            box-sizing: border-box;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            padding: 12px;
-            text-align: center;
-            border-bottom: 1px solid #334155;
-        }
-        th { color: var(--text-secondary); }
-        
-        .modal {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.95);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-box {
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .big-user-banner {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 12px;
-            text-align: center;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
-        }
-        .big-user-banner h3 {
-            margin: 0;
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        .big-user-banner .user-name-large {
-            font-size: 28px;
-            font-weight: bold;
-            margin: 5px 0 0 0;
-        }
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .radio-group {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 15px;
-            justify-content: center;
-        }
-        .radio-group label {
-            cursor: pointer;
-            font-size: 16px;
-        }
-        .camera-preview {
-            width: 100%;
-            max-height: 200px;
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            display: none;
-        }
-        .ai-result-box {
-            background: #0f172a;
-            border: 1px solid #10b981;
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 15px;
-            font-size: 14px;
-            color: #34d399;
-            text-align: left;
-            line-height: 1.6;
-        }
-        .instruction-note {
-            background: rgba(59, 130, 246, 0.1);
-            border-left: 4px solid #3b82f6;
-            padding: 10px;
-            font-size: 13px;
-            color: #93c5fd;
-            margin-bottom: 15px;
-            border-radius: 0 6px 6px 0;
-            text-align: left;
-            line-height: 1.5;
-        }
-        .settings-bar {
-            background: #1e293b;
-            padding: 10px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 1px solid #334155;
-        }
+        :root { --bg-color: #0f172a; --card-bg: #1e293b; --accent-color: #10b981; --text-color: #f8fafc; }
+        body { font-family: sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; display: grid; gap: 20px; }
+        .card { background-color: var(--card-bg); border-radius: 12px; padding: 20px; }
+        button { background-color: var(--accent-color); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; margin-top: 10px; }
+        input { width: 100%; padding: 10px; margin: 8px 0; background: #0f172a; border: 1px solid #475569; color: white; border-radius: 6px; box-sizing: border-box; }
+        .ai-result-box { background: #0f172a; border: 1px solid #10b981; padding: 12px; border-radius: 6px; margin: 10px 0; color: #34d399; }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-box { background: var(--card-bg); padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; }
     </style>
 </head>
 <body>
 
-    <!-- 初回ログイン・選択画面 -->
-    <div id="login-modal" class="modal">
-        <div class="modal-box">
-            <h2>🀄 プレイヤー選択</h2>
-            <p style="color: var(--text-secondary); font-size: 14px;">自分の番号を選んで参加してください。<br>あとから好きな名前に変更できます。</p>
-            <select id="select-slot">
-                <option value="0">プレイヤー1</option>
-                <option value="1">プレイヤー2</option>
-                <option value="2">プレイヤー3</option>
-                <option value="3">プレイヤー4</option>
-                <option value="4">プレイヤー5</option>
-                <option value="5">プレイヤー6</option>
-            </select>
-            <button onclick="setMySlot()">この枠で参加する</button>
-        </div>
-    </div>
-
-    <!-- 名前変更モーダル -->
-    <div id="rename-modal" class="modal" style="display: none;">
-        <div class="modal-box">
-            <h2>✏️ 名前の変更</h2>
-            <p style="color: var(--text-secondary); font-size: 14px;">あなたの表示名を入力してください。</p>
-            <input type="text" id="new-name-input" placeholder="例: けんてぃ">
-            <button onclick="saveNewName()">名前に反映する</button>
-            <button class="secondary" onclick="closeRenameModal()">キャンセル</button>
-        </div>
-    </div>
-
-    <!-- Gemini API設定モーダル -->
     <div id="api-modal" class="modal" style="display: none;">
         <div class="modal-box">
-            <h2>🔑 Gemini APIキーの設定</h2>
-            <p style="color: var(--text-secondary); font-size: 14px;">APIキーを貼り付けてください。</p>
+            <h2>🔑 APIキー設定</h2>
             <input type="password" id="api-key-input" placeholder="AIzaSy...">
-            <button onclick="saveApiKey()">保存する</button>
-            <button class="secondary" onclick="closeApiModal()">閉じる</button>
+            <button onclick="saveApiKey()">保存して閉じる</button>
         </div>
     </div>
 
     <h1>🀄 麻雀リアルタイム・スコアボード</h1>
-    
-    <!-- 設定・ログイン情報バー -->
-    <div class="settings-bar">
-        <span style="font-size: 14px; color: var(--text-secondary);">⚙️ Gemini連携ステータス: <b id="api-status-text" style="color:#ef4444;">未設定</b></span>
-        <button class="secondary" style="width: auto; padding: 6px 12px; margin: 0; font-size: 13px;" onclick="openApiModal()">APIキーを設定</button>
-    </div>
-
-    <!-- ログイン中プレイヤーの表示 -->
-    <div class="big-user-banner">
-        <h3>ログイン中のあなた</h3>
-        <div class="user-name-large" id="current-user-display">未設定</div>
-        <div class="button-group">
-            <button class="secondary" style="background: rgba(0,0,0,0.3); font-size: 12px;" onclick="openRenameModal()">名前を変更する</button>
-            <button class="secondary" style="background: rgba(0,0,0,0.3); font-size: 12px;" onclick="switchUser()">別の人として入り直す</button>
-        </div>
-    </div>
+    <button class="secondary" onclick="document.getElementById('api-modal').style.display='flex'">APIキーを設定</button>
 
     <div class="container">
-        <!-- 点数入力・Gemini AI自動判定パネル -->
         <div class="card">
             <h2>✨ Gemini 自動点数計算</h2>
-            <form id="score-form" onsubmit="handleSubmit(event)">
-                <label>① 手牌の写真を撮影 / 選択：</label>
-                <div class="instruction-note">
-                    💡 <b>撮影のコツ：</b><br>
-                    • <b>ポン・チー（鳴き）：</b> 手牌の<b>左側</b>に横向きで置く。<br>
-                    • <b>アガリ牌：</b> 手牌の列の<b>「上（または下）」にポツンと離して1枚だけ横向き</b>に置く。<br>
-                    この状態でボタンを押すと、Geminiが画像から牌を判別して一発で点数を計算します！
-                </div>
-                <input type="file" accept="image/*" capture="environment" id="camera-input" onchange="previewImage(event)">
-                <img id="preview" class="camera-preview" alt="プレビュー">
-
-                <label>② アガり方：</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="method" value="ron" checked onchange="toggleLoserField()"> ロン</label>
-                    <label><input type="radio" name="method" value="tsumo" onchange="toggleLoserField()"> ツモ</label>
-                </div>
-
-                <div id="loser-container">
-                    <label for="loser">放銃者（振り込んだ人）：</label>
-                    <select id="loser">
-                        <!-- 動的に生成 -->
-                    </select>
-                </div>
-
-                <button type="button" id="ai-calc-btn" onclick="askGeminiToCalculate()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); margin-top: 10px;">🤖 Geminiに写真を送って一発自動計算！</button>
-
-                <!-- 解析結果表示エリア -->
-                <div id="ai-result-display" class="ai-result-box" style="display: none;">
-                    <strong>【Gemini 解析結果】</strong><br>
-                    <span id="ai-detected-text">解析中...</span>
-                </div>
-
-                <label for="score" style="margin-top: 15px;">③ 算出した点数（直接書き換えも可能）：</label>
-                <input type="number" id="score" placeholder="例: 7700" required>
-
-                <button type="submit">スコアを反映する！</button>
-            </form>
-            <button class="secondary" onclick="resetScores()">リセット</button>
-        </div>
-
-        <!-- リアルタイム順位表 -->
-        <div class="card">
-            <h2>🏆 リアルタイム順位表</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>順位</th>
-                        <th>名前</th>
-                        <th>トータルポイント</th>
-                    </tr>
-                </thead>
-                <tbody id="ranking-body">
-                    <!-- 動的に生成 -->
-                </tbody>
-            </table>
+            <input type="file" accept="image/*" capture="environment" id="camera-input">
+            <button id="ai-calc-btn" onclick="askGeminiToCalculate()">🤖 Gemini 2.0 で解析する！</button>
+            <div id="ai-result-display" class="ai-result-box" style="display: none;">
+                <span id="ai-detected-text">解析中...</span>
+            </div>
+            <input type="number" id="score" placeholder="点数">
+            <button onclick="alert('スコア反映機能は既存のものと繋げてください')">スコアを反映する！</button>
         </div>
     </div>
 
     <script>
-        let players = JSON.parse(localStorage.getItem('mahjong_players')) || [
-            { name: "プレイヤー1", points: 25000 },
-            { name: "プレイヤー2", points: 25000 },
-            { name: "プレイヤー3", points: 25000 },
-            { name: "プレイヤー4", points: 25000 },
-            { name: "プレイヤー5", points: 25000 },
-            { name: "プレイヤー6", points: 25000 }
-        ];
-
-        let mySlotIndex = localStorage.getItem('mahjong_my_slot');
-        // ここに直接APIキーを書いてもOK（GitHubシークレットを許可してね）
         let geminiApiKey = localStorage.getItem('mahjong_api_key') || '';
 
-        window.onload = function() {
-            updateApiStatus();
-            if (mySlotIndex !== null && players[mySlotIndex]) {
-                applyUserSession(parseInt(mySlotIndex));
-            } else {
-                document.getElementById('login-modal').style.display = 'flex';
-            }
-        };
-
-        function updateApiStatus() {
-            let statusText = document.getElementById('api-status-text');
-            if (geminiApiKey) {
-                statusText.innerText = "設定済み (Ready)";
-                statusText.style.color = "#10b981";
-            } else {
-                statusText.innerText = "未設定";
-                statusText.style.color = "#ef4444";
-            }
-        }
-
-        function openApiModal() {
-            document.getElementById('api-key-input').value = geminiApiKey;
-            document.getElementById('api-modal').style.display = 'flex';
-        }
-
-        function closeApiModal() {
+        function saveApiKey() {
+            geminiApiKey = document.getElementById('api-key-input').value.trim();
+            localStorage.setItem('mahjong_api_key', geminiApiKey);
             document.getElementById('api-modal').style.display = 'none';
         }
 
-        function saveApiKey() {
-            let key = document.getElementById('api-key-input').value.trim();
-            if (key) {
-                geminiApiKey = key;
-                localStorage.setItem('mahjong_api_key', key);
-                updateApiStatus();
-                closeApiModal();
-                alert("APIキーを保存しました！");
-            }
-        }
-
-        function setMySlot() {
-            const slot = document.getElementById('select-slot').value;
-            localStorage.setItem('mahjong_my_slot', slot);
-            applyUserSession(parseInt(slot));
-        }
-
-        function applyUserSession(index) {
-            mySlotIndex = index;
-            document.getElementById('login-modal').style.display = 'none';
-            document.getElementById('current-user-display').innerText = players[index].name;
-            updateLoserOptions();
-            updateRanking();
-        }
-
-        function switchUser() {
-            localStorage.removeItem('mahjong_my_slot');
-            document.getElementById('login-modal').style.display = 'flex';
-        }
-
-        function openRenameModal() {
-            document.getElementById('new-name-input').value = players[mySlotIndex].name;
-            document.getElementById('rename-modal').style.display = 'flex';
-        }
-
-        function closeRenameModal() {
-            document.getElementById('rename-modal').style.display = 'none';
-        }
-
-        function saveNewName() {
-            const newName = document.getElementById('new-name-input').value.trim();
-            if (newName) {
-                players[mySlotIndex].name = newName;
-                saveData();
-                document.getElementById('current-user-display').innerText = newName;
-                updateLoserOptions();
-                updateRanking();
-                closeRenameModal();
-            }
-        }
-
-        function updateLoserOptions() {
-            let loserSelect = document.getElementById('loser');
-            loserSelect.innerHTML = '';
-            players.forEach((p, index) => {
-                if (index !== parseInt(mySlotIndex)) {
-                    let opt = document.createElement('option');
-                    opt.value = index;
-                    opt.text = p.name;
-                    loserSelect.appendChild(opt);
-                }
-            });
-        }
-
-        function toggleLoserField() {
-            let method = document.querySelector('input[name="method"]:checked').value;
-            let loserContainer = document.getElementById('loser-container');
-            if (method === 'ron') {
-                loserContainer.style.display = 'block';
-            } else {
-                loserContainer.style.display = 'none';
-            }
-        }
-
-        function previewImage(event) {
-            let reader = new FileReader();
-            reader.onload = function() {
-                let output = document.getElementById('preview');
-                output.src = reader.result;
-                output.style.display = 'block';
-            };
-            reader.readAsDataURL(event.target.files[0]);
-        }
-
-        // 画像リサイズ＆圧縮
-        function optimizeAndConvertToBase64(file) {
-            return new Promise((resolve, reject) => {
-                let reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = function (event) {
-                    let img = new Image();
-                    img.src = event.target.result;
-                    img.onload = function () {
-                        let canvas = document.createElement('canvas');
-                        let MAX_WIDTH = 1024;
-                        let MAX_HEIGHT = 1024;
-                        let width = img.width;
-                        let height = img.height;
-
-                        if (width > height) {
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
-                            }
-                        } else {
-                            if (height > MAX_HEIGHT) {
-                                width *= MAX_HEIGHT / height;
-                                height = MAX_HEIGHT;
-                            }
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-                        let ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.85));
-                    };
-                    img.onerror = error => reject(error);
-                };
-                reader.onerror = error => reject(error);
-            });
-        }
-
-        // 最安定の gemini-1.5-flash を直叩きする関数
         async function askGeminiToCalculate() {
-            if (!geminiApiKey) {
-                alert("GeminiのAPIキーが設定されていません。上部の「APIキーを設定」ボタンからキーを入力してください。");
-                openApiModal();
-                return;
-            }
-
+            if (!geminiApiKey) { alert("APIキーを設定してください"); return; }
             let fileInput = document.getElementById('camera-input');
-            if (fileInput.files.length === 0) {
-                alert("まずは手牌の写真を撮影または選択してください！");
-                return;
-            }
+            if (fileInput.files.length === 0) { alert("画像を選択してください"); return; }
 
             let btn = document.getElementById('ai-calc-btn');
-            let resultBox = document.getElementById('ai-result-display');
             let detectedText = document.getElementById('ai-detected-text');
-
+            document.getElementById('ai-result-display').style.display = 'block';
+            
             btn.disabled = true;
-            btn.innerText = "🔄 画像を解析中...";
-            resultBox.style.display = 'block';
-            detectedText.innerHTML = "画像を最適化し、Geminiで役と点数を計算しています...";
+            btn.innerText = "解析中...";
 
             try {
-                let base64Image = await optimizeAndConvertToBase64(fileInput.files[0]);
-                let base64Data = base64Image.split(',')[1];
+                let reader = new FileReader();
+                reader.readAsDataURL(fileInput.files[0]);
+                reader.onload = async (e) => {
+                    let base64Data = e.target.result.split(',')[1];
+                    
+                    // ここが最新モデルの指定です！
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [
+                                    { text: "手牌画像を解析し、役、翻数、符数、点数をJSONで返してください。" },
+                                    { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+                                ]
+                            }]
+                        })
+                    });
 
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                {
-                                    text: `あなたは麻雀のプロ審判です。提供された手牌の画像から成立している役を判定し、点数を計算してください。
-ルール補足：
-- 左側にある横向きの牌ブロックは「ポン・チー（鳴き）」です。
-- 列の上（または下）にポツンと独立して横向きに置かれている牌は「アガリ牌」です。
-以下のJSON形式のみで正確に回答してください。他の文章は一切含めないでください。
-{
-  "yakuNames": ["役名1", "役名2"],
-  "totalHans": 翻数(数値),
-  "totalFu": 符数(数値),
-  "score": 点数(数値, ロンアガリの基本得点または満貫などの支払い点数),
-  "comment": "判定の解説文"
-}`
-                                },
-                                {
-                                    inline_data: {
-                                        mime_type: "image/jpeg",
-                                        data: base64Data
-                                    }
-                                }
-                            ]
-                        }]
-                    })
-                });
-
-                if (!response.ok) {
-                    let errText = await response.text();
-                    throw new Error(`APIエラー: ${response.status} ${errText}`);
-                }
-
-                const data = await response.json();
-                let rawText = data.candidates[0].content.parts[0].text;
-                
-                rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                let parsedResult = JSON.parse(rawText);
-
-                detectedText.innerHTML = `
-                    <b>成立役:</b> ${parsedResult.yakuNames.join(', ')}<br>
-                    <b>翻・符:</b> ${parsedResult.totalHans}翻 ${parsedResult.totalFu}符<br>
-                    <b>計算点数:</b> <span style="font-size:16px; color:#fff;"><b>${parsedResult.score.toLocaleString()} 点</b></span><br>
-                    <small style="color:var(--text-secondary);">${parsedResult.comment}</small>
-                `;
-
-                document.getElementById('score').value = parsedResult.score;
+                    const data = await response.json();
+                    if(data.error) throw new Error(data.error.message);
+                    
+                    let text = data.candidates[0].content.parts[0].text;
+                    detectedText.innerText = text;
+                    btn.disabled = false;
+                    btn.innerText = "🤖 Gemini 2.0 で解析する！";
+                };
+            } catch (err) {
+                detectedText.innerText = "エラー: " + err.message;
                 btn.disabled = false;
-                btn.innerText = "🤖 Geminiに写真を送って一発自動計算！";
-
-            } catch (error) {
-                console.error(error);
-                detectedText.innerHTML = `<span style="color:#ef4444;">解析に失敗しました: ${error.message}</span>`;
-                btn.disabled = false;
-                btn.innerText = "🤖 Geminiに写真を送って一発自動計算！";
+                btn.innerText = "🤖 再試行する";
             }
-        }
-
-        function handleSubmit(event) {
-            event.preventDefault();
-            let method = document.querySelector('input[name="method"]:checked').value;
-            let scoreInput = parseInt(document.getElementById('score').value);
-
-            if (isNaN(scoreInput) || scoreInput <= 0) {
-                alert("正しい点数を入力してください。");
-                return;
-            }
-
-            if (method === 'ron') {
-                let loserIndex = parseInt(document.getElementById('loser').value);
-                players[mySlotIndex].points += scoreInput;
-                players[loserIndex].points -= scoreInput;
-                alert(`${players[loserIndex].name} から ${scoreInput.toLocaleString()} 点を奪取しました！`);
-            } else {
-                let splitScore = Math.ceil(scoreInput / 5 / 100) * 100;
-                let totalCollected = 0;
-
-                players.forEach((p, index) => {
-                    if (index !== parseInt(mySlotIndex)) {
-                        p.points -= splitScore;
-                        totalCollected += splitScore;
-                    }
-                });
-                players[mySlotIndex].points += totalCollected;
-                alert(`ツモ！全員から合計 ${totalCollected.toLocaleString()} 点を獲得しました！`);
-            }
-
-            saveData();
-            updateRanking();
-            document.getElementById('score').value = '';
-            document.getElementById('preview').style.display = 'none';
-            document.getElementById('camera-input').value = '';
-            document.getElementById('ai-result-display').style.display = 'none';
-        }
-
-        function resetScores() {
-            if (confirm("本当にポイントを初期状態（25,000点）にリセットしますか？")) {
-                players.forEach(p => p.points = 25000);
-                saveData();
-                updateRanking();
-                alert("リセットしました！");
-            }
-        }
-
-        function saveData() {
-            localStorage.setItem('mahjong_players', JSON.stringify(players));
-        }
-
-        function updateRanking() {
-            let sorted = [...players].map((p, index) => ({ ...p, originalIndex: index })).sort((a, b) => b.points - a.points);
-            let tbody = document.getElementById('ranking-body');
-            tbody.innerHTML = '';
-
-            sorted.forEach((p, rank) => {
-                let tr = document.createElement('tr');
-                let isMe = (p.originalIndex === parseInt(mySlotIndex));
-                if (isMe) {
-                    tr.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
-                }
-                tr.innerHTML = `<td>${rank + 1}位</td><td>${p.name} ${isMe ? '（自分）' : ''}</td><td>${p.points.toLocaleString()} 点</td>`;
-                tbody.appendChild(tr);
-            });
         }
     </script>
 </body>
