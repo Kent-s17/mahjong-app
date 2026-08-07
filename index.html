@@ -203,7 +203,7 @@
         <div class="modal-box">
             <h2>🔑 Gemini APIキーの設定</h2>
             <p style="color: var(--text-secondary); font-size: 14px;">APIキーを貼り付けてください。</p>
-            <input type="password" id="api-key-input" placeholder="AQ... または AIzaSy...">
+            <input type="password" id="api-key-input" placeholder="AIzaSy...">
             <button onclick="saveApiKey()">保存する</button>
             <button class="secondary" onclick="closeApiModal()">閉じる</button>
         </div>
@@ -300,7 +300,9 @@
         ];
 
         let mySlotIndex = localStorage.getItem('mahjong_my_slot');
-        let geminiApiKey = "AQ.Ab8RN6JX3LZUKoHlBIBotX6muVX_x6HbFta9yV6myUw2YWsKRw" // ←ここに新しいキーを直接入れる
+        // ここに直接APIキーを書いてもOK（GitHubシークレットを許可してね）
+        let geminiApiKey = localStorage.getItem('mahjong_api_key') || '';
+
         window.onload = function() {
             updateApiStatus();
             if (mySlotIndex !== null && players[mySlotIndex]) {
@@ -414,7 +416,7 @@
             reader.readAsDataURL(event.target.files[0]);
         }
 
-       // 画像を自動でリサイズ＆最適化してBase64にする関数
+        // 画像リサイズ＆圧縮
         function optimizeAndConvertToBase64(file) {
             return new Promise((resolve, reject) => {
                 let reader = new FileReader();
@@ -445,10 +447,7 @@
                         canvas.height = height;
                         let ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-
-                        // JPEG形式のBase64に変換（品質0.85で軽量化）
-                        let dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                        resolve(dataUrl);
+                        resolve(canvas.toDataURL('image/jpeg', 0.85));
                     };
                     img.onerror = error => reject(error);
                 };
@@ -456,7 +455,7 @@
             });
         }
 
-        // 安定版 gemini-1.5-flash を使い、リトライ機能付きでAI計算を実行する関数
+        // 最安定の gemini-1.5-flash を直叩きする関数
         async function askGeminiToCalculate() {
             if (!geminiApiKey) {
                 alert("GeminiのAPIキーが設定されていません。上部の「APIキーを設定」ボタンからキーを入力してください。");
@@ -475,104 +474,15 @@
             let detectedText = document.getElementById('ai-detected-text');
 
             btn.disabled = true;
-            btn.innerText = "🔄 画像を最適化して解析中...";
+            btn.innerText = "🔄 画像を解析中...";
             resultBox.style.display = 'block';
-            detectedText.innerHTML = "画像を軽量化し、AIで役と点数を計算しています...";
+            detectedText.innerHTML = "画像を最適化し、Geminiで役と点数を計算しています...";
 
-            let maxRetries = 2; // 最大2回まで再挑戦
-            let success = false;
+            try {
+                let base64Image = await optimizeAndConvertToBase64(fileInput.files[0]);
+                let base64Data = base64Image.split(',')[1];
 
-            for (let attempt = 1; attempt <= maxRetries; attempt++) {
-                try {
-                    // 画像を軽量化してからBase64化
-                    let base64Image = await optimizeAndConvertToBase64(fileInput.files[0]);
-                    let base64Data = base64Image.split(',')[1];
-                    let mimeType = "image/jpeg";
-
-                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                parts: [
-                                    {
-                                        text: `あなたは麻雀のプロ審判です。提供された手牌の画像から成立している役を判定し、点数を計算してください。
-ルール補足：
-- 左側にある横向きの牌ブロックは「ポン・チー（鳴き）」です。
-- 列の上（または下）にポツンと独立して横向きに置かれている牌は「アガリ牌」です。
-以下のJSON形式のみで正確に回答してください。他の文章は一切含めないでください。
-{
-  "yakuNames": ["役名1", "役名2"],
-  "totalHans": 翻数(数値),
-  "totalFu": 符数(数値),
-  "score": 点数(数値, ロンアガリの基本得点または満貫などの支払い点数),
-  "comment": "判定の解説文"
-}`
-                                    },
-                                    {
-                                        inline_data: {
-                                            mime_type: mimeType,
-                                            data: base64Data
-                                        }
-                                    }
-                                ]
-                            }]
-                        })
-                    });
-
-                    if (!response.ok) {
-                        let errText = await response.text();
-                        throw new Error(`APIエラー: ${response.status} ${errText}`);
-                    }
-
-                    const data = await response.json();
-                    let rawText = data.candidates[0].content.parts[0].text;
-                    
-                    rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-                    let parsedResult = JSON.parse(rawText);
-
-                    detectedText.innerHTML = `
-                        <b>成立役:</b> ${parsedResult.yakuNames.join(', ')}<br>
-                        <b>翻・符:</b> ${parsedResult.totalHans}翻 ${parsedResult.totalFu}符<br>
-                        <b>計算点数:</b> <span style="font-size:16px; color:#fff;"><b>${parsedResult.score.toLocaleString()} 点</b></span><br>
-                        <small style="color:var(--text-secondary);">${parsedResult.comment}</small>
-                    `;
-
-                    document.getElementById('score').value = parsedResult.score;
-                    success = true;
-                    break; // 成功したらループを抜ける
-
-                } catch (error) {
-                    console.error(`試行 ${attempt} 回目失敗:`, error);
-                    if (attempt === maxRetries) {
-                        detectedText.innerHTML = `<span style="color:#ef4444;">解析に失敗しました: ${error.message}</span>`;
-                    } else {
-                        detectedText.innerHTML = `🔄 混雑しているため自動リトライ中... (${attempt}/${maxRetries})`;
-                        await new Promise(r => setTimeout(r, 2000)); // 2秒待ってリトライ
-                    }
-                }
-            }
-
-            btn.disabled = false;
-            btn.innerText = "🤖 Geminiに写真を送って一発自動計算！";
-        }
-
-                // 利用可能なモデルを動的に取得して直近のflashモデルで実行する
-                let modelName = "gemini-1.5-flash"; // デフォルト
-                try {
-                    const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiApiKey}`);
-                    if (listRes.ok) {
-                        const listData = await listRes.json();
-                        const flashModel = listData.models.find(m => m.name.includes("flash") && m.supportedGenerationMethods.includes("generateContent"));
-                        if (flashModel) {
-                            modelName = flashModel.name.replace("models/", "");
-                        }
-                    }
-                } catch(e) {
-                    console.log("Model list fetch skipped, using default.");
-                }
-
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${geminiApiKey}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -594,7 +504,7 @@
                                 },
                                 {
                                     inline_data: {
-                                        mime_type: mimeType,
+                                        mime_type: "image/jpeg",
                                         data: base64Data
                                     }
                                 }
@@ -631,15 +541,6 @@
                 btn.disabled = false;
                 btn.innerText = "🤖 Geminiに写真を送って一発自動計算！";
             }
-        }
-
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                let reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = error => reject(error);
-            });
         }
 
         function handleSubmit(event) {
