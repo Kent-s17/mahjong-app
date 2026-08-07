@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>麻雀リアルタイム・スコアボード (AI手牌解析対応)</title>
+    <title>麻雀リアルタイム・スコアボード (精度向上版)</title>
     <style>
         :root {
             --bg-color: #0f172a;
@@ -166,6 +166,13 @@
             align-items: center;
             border: 1px solid #334155;
         }
+        .sub-options {
+            background: rgba(255,255,255,0.03);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #334155;
+        }
     </style>
 </head>
 <body>
@@ -241,10 +248,37 @@
                 <input type="file" accept="image/*" capture="environment" id="camera-input" onchange="previewImage(event)">
                 <img id="preview" class="camera-preview" alt="プレビュー">
 
-                <label>② アガり方：</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="method" value="ron" checked onchange="updateFormOptions()"> ロン</label>
-                    <label><input type="radio" name="method" value="tsumo" onchange="updateFormOptions()"> ツモ</label>
+                <label>② アガり方の詳細設定：</label>
+                <div class="sub-options">
+                    <div style="margin-bottom: 10px;">
+                        <span style="font-size: 13px; color: var(--text-secondary);">アガリ方:</span>
+                        <div class="radio-group" style="margin: 5px 0 0 0; justify-content: flex-start;">
+                            <label><input type="radio" name="method" value="ron" checked onchange="updateFormOptions()"> ロン</label>
+                            <label><input type="radio" name="method" value="tsumo" onchange="updateFormOptions()"> ツモ</label>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <div style="flex: 1;">
+                            <span style="font-size: 13px; color: var(--text-secondary);">リーチ:</span>
+                            <select id="reach-select" style="margin: 4px 0 0 0;">
+                                <option value="no">なし</option>
+                                <option value="yes">リーチ (1翻)</option>
+                                <option value="double">ダブルリーチ</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <span style="font-size: 13px; color: var(--text-secondary);">ドラの枚数:</span>
+                            <select id="dora-select" style="margin: 4px 0 0 0;">
+                                <option value="0">0枚</option>
+                                <option value="1">1枚</option>
+                                <option value="2">2枚</option>
+                                <option value="3">3枚</option>
+                                <option value="4">4枚</option>
+                                <option value="5">5枚以上</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
                 <label>👑 親は誰？：</label>
@@ -264,7 +298,7 @@
                     <select id="victim3" style="margin-bottom: 15px;"></select>
                 </div>
 
-                <button type="button" id="ai-calc-btn" onclick="askGeminiToCalculate()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); margin-top: 10px;">🤖 Gemini 3.5 で一発自動計算！</button>
+                <button type="button" id="ai-calc-btn" onclick="askGeminiToCalculate()" style="background: linear-gradient(135deg, #3b82f6, #2563eb); margin-top: 10px;">🤖 AIに手牌 ＋ 選択条件を渡して計算！</button>
 
                 <!-- 解析結果表示エリア -->
                 <div id="ai-result-display" class="ai-result-box" style="display: none;">
@@ -396,7 +430,6 @@
             document.getElementById('ron-fields').style.display = method === 'ron' ? 'block' : 'none';
             document.getElementById('tsumo-fields').style.display = method === 'tsumo' ? 'block' : 'none';
 
-            // セレクトボックスの再構築
             let dealerSelect = document.getElementById('dealer-select');
             let loserSelect = document.getElementById('loser-select');
             let v1 = document.getElementById('victim1');
@@ -419,7 +452,6 @@
                 }
             });
 
-            // ツモ相手のデフォルト選択被りを防ぐ
             let availableIndices = players.map((_, i) => i).filter(i => i !== parseInt(mySlotIndex));
             if (availableIndices.length >= 3) {
                 v1.selectedIndex = 0;
@@ -483,18 +515,44 @@
                 return;
             }
 
+            let method = document.querySelector('input[name="method"]:checked').value;
+            let reachVal = document.getElementById('reach-select').value;
+            let doraCount = document.getElementById('dora-select').value;
+            let dealerIndex = parseInt(document.getElementById('dealer-select').value);
+            let isDealer = (parseInt(mySlotIndex) === dealerIndex);
+
             let btn = document.getElementById('ai-calc-btn');
             let resultBox = document.getElementById('ai-result-display');
             let detectedText = document.getElementById('ai-detected-text');
 
             btn.disabled = true;
-            btn.innerText = "🔄 解析中...";
+            btn.innerText = "🔄 条件付きで解析中...";
             resultBox.style.display = 'block';
-            detectedText.innerHTML = "牌を識別し、翻符や点数を計算しています...";
+            detectedText.innerHTML = "手牌の画像と指定された条件（アガリ方・リーチ・ドラ等）をもとに正確に計算しています...";
 
             try {
                 let base64Image = await optimizeAndConvertToBase64(fileInput.files[0]);
                 let base64Data = base64Image.split(',')[1];
+
+                // ユーザーが選択した条件をプロンプトに組み込んでAIに正確な計算を強制する
+                let promptText = `あなたは麻雀の厳格なプロ審判です。提供された手牌画像と、以下の【ユーザーが指定した確定条件】を組み合わせて、最終的な役、翻数、符数、階級、獲得点数を計算してください。
+
+【ユーザーが指定した確定条件】
+- アガリ方: ${method === 'ron' ? 'ロンアガリ' : 'ツモアガリ'}
+- 立直(リーチ): ${reachVal === 'yes' ? 'あり (1翻)' : reachVal === 'double' ? 'ダブル立直 (2翻)' : 'なし'}
+- ドラの枚数: ${doraCount}枚
+- プレイヤーの立場: ${isDealer ? '親' : '子'}
+
+【重要】
+画像内の手牌から基本の役を読み取り、上記の「立直」や「ドラ」の枚数を必ず合算して翻数を決定してください。誤ってロンなのにツモ扱いしたりしないでください。
+余計な文章やマークダウン（\`\`\`など）を一切含めず、必ず以下の純粋なJSON文字列だけを返してください。
+{
+  "yakuNames": ["役名1", "役名2", "立直", "ドラX"],
+  "hans": "合計翻数の数値または役満 (例: 4 または 役満)",
+  "fu": "符数 (例: 30 または なし)",
+  "level": "階級 (例: 満貫、跳満、3翻 など)",
+  "score": 獲得点数の数値(例: 7700, 12000などの数値)
+}`;
 
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${geminiApiKey}`, {
                     method: 'POST',
@@ -502,17 +560,7 @@
                     body: JSON.stringify({
                         contents: [{
                             parts: [
-                                {
-                                    text: `あなたは麻雀のプロ審判です。手牌画像から役、翻数、符数、満貫・倍満・役満などの階級、および獲得点数を計算してください。
-余計な文章やマークダウン（\`\`\`など）を一切含めず、必ず以下の純粋なJSON文字列だけを返してください。
-{
-  "yakuNames": ["役名1", "役名2"],
-  "hans": "翻数または役満の表記 (例: 役満 または 3)",
-  "fu": "符数 (例: 30 または なし)",
-  "level": "階級 (例: 役満、倍満、満貫、3翻 など)",
-  "score": 獲得点数の数値(例: 8000, 12000, 32000などの数値)
-}`
-                                },
+                                { text: promptText },
                                 {
                                     inline_data: {
                                         mime_type: "image/jpeg",
@@ -536,20 +584,20 @@
                 let parsedResult = JSON.parse(rawText);
 
                 detectedText.innerHTML = `
-                    <b>成立役:</b> ${parsedResult.yakuNames.join(', ')}<br>
+                    <b>成立役・条件:</b> ${parsedResult.yakuNames.join(', ')}<br>
                     <b>翻・符:</b> ${parsedResult.hans}翻 / ${parsedResult.fu}符 （<b>${parsedResult.level}</b>）<br>
                     <b>点数:</b> <span style="font-size:16px; color:#fff;"><b>+${parsedResult.score.toLocaleString()} 点</b></span>
                 `;
 
                 document.getElementById('score').value = parsedResult.score;
                 btn.disabled = false;
-                btn.innerText = "🤖 Gemini 3.5 で一発自動計算！";
+                btn.innerText = "🤖 AIに手牌 ＋ 選択条件を渡して計算！";
 
             } catch (error) {
                 console.error(error);
                 detectedText.innerHTML = `<span style="color:#ef4444;">解析に失敗しました: ${error.message}</span>`;
                 btn.disabled = false;
-                btn.innerText = "🤖 Gemini 3.5 で一発自動計算！";
+                btn.innerText = "🤖 AIに手牌 ＋ 選択条件を渡して計算！";
             }
         }
 
@@ -563,7 +611,6 @@
                 return;
             }
 
-            // 親がロンアガリした場合の点数1.5倍補正
             if (mySlotIndex == dealerIndex && method === 'ron') {
                 scoreInput = Math.floor(scoreInput * 1.5 / 100) * 100;
             }
